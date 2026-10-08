@@ -1,0 +1,8 @@
+Detalhamento
+da fatura
+Lançamentos: compras e saques
+FULANO DE TAL (final 1234)
+Data Estabelecimento Valor em R$
+06/02 SEGURO DELTA PA/04 BZ 250,00
+05/05 RESTAURANTE GAMA 150,00
+Detalhamento geral conforme resolução Banco Central nº 365/2023

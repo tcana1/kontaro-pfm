@@ -1,0 +1,7 @@
+Fulano de Tal | fatura de Fevereiro de 2021 | cartão final 1234
+Lançamentos do cartão físico | Fulano de Tal | Final 1234 Total do cartão: R$ 137,50
+Total de compras e despesas R$ 137,50
+14 Jan SERVICO EXTERIOR US$ 25,00
+Cotação da moeda - R$ 5,50
+Conversão para Real - R$ 137,50
+Taxas e encargos

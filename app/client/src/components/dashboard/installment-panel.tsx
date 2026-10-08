@@ -1,0 +1,239 @@
+
+import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useDateFnsLocale } from '@/lib/date-fns-locale';
+import type { Locale } from 'date-fns';
+import { format, addMonths } from 'date-fns';
+import { ChevronDown, ChevronRight } from 'lucide-react';
+import {
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, LabelList,
+} from 'recharts';
+import { useServiceQuery } from '@/hooks/useServiceQuery';
+import { useFinance } from '@/contexts/finance-context';
+import { formatCurrency } from '@/lib/currency-formatter';
+
+interface Props {
+  selectedMonth: Date;
+}
+
+interface InstallmentSeries {
+  payee: string;
+  purchase_date: string;
+  installment_total: number;
+  paid: number;
+  remaining: number;
+  monthly_amount: number;
+}
+
+interface MonthEvent {
+  payee: string;
+  purchase_date: string;
+  installment_total: number;
+  monthly_amount: number;
+}
+
+interface InstallmentData {
+  active: InstallmentSeries[];
+  ending_this_month: MonthEvent[];
+  starting_this_month: MonthEvent[];
+}
+
+interface TimelineEntry {
+  month: string;
+  label: string;
+  total: number;
+}
+
+function shortK(val: number): string {
+  if (val === 0) return '';
+  return `${(val / 1000).toFixed(val >= 10000 ? 0 : 1)}k`;
+}
+
+function buildTimeline(active: InstallmentSeries[], fromMonth: Date, dateLocale: Locale): TimelineEntry[] {
+  const buckets: Record<string, number> = {};
+  for (const series of active) {
+    for (let i = 1; i <= series.remaining; i++) {
+      const key = format(addMonths(fromMonth, i), 'yyyy-MM');
+      buckets[key] = (buckets[key] ?? 0) + series.monthly_amount;
+    }
+  }
+  return Array.from({ length: 12 }, (_, i) => {
+    const d = addMonths(fromMonth, i + 1);
+    const key = format(d, 'yyyy-MM');
+    return { month: key, label: format(d, 'MMM yy', { locale: dateLocale }), total: Math.round((buckets[key] ?? 0) * 100) / 100 };
+  });
+}
+
+interface ExpandableSectionProps {
+  label: string;
+  items: Array<MonthEvent & { remaining?: number; paid?: number }>;
+  total: number;
+  currency: any;
+  totalSuffix?: string;
+  showInstallmentCount?: boolean;
+  showProgress?: boolean;
+}
+
+function ExpandableSection({ label, items, total, currency, totalSuffix, showInstallmentCount, showProgress }: ExpandableSectionProps) {
+  const [open, setOpen] = useState(false);
+  if (items.length === 0) return null;
+
+  return (
+    <div>
+      <button
+        onClick={() => setOpen(v => !v)}
+        className="w-full flex items-center justify-between text-left group"
+      >
+        <div className="flex items-center gap-1">
+          {open
+            ? <ChevronDown className="h-3.5 w-3.5 text-gray-400" />
+            : <ChevronRight className="h-3.5 w-3.5 text-gray-400" />
+          }
+          <span className="text-xs font-medium text-gray-500 dark:text-gray-400">{label}</span>
+        </div>
+        <span className="text-sm tabular-nums text-gray-700 dark:text-gray-300">
+          {formatCurrency(total, currency, 0)}{totalSuffix}
+        </span>
+      </button>
+
+      {open && (
+        <div className="mt-1.5 ml-5 space-y-1">
+          {items.map((item, i) => (
+            <div key={i} className="flex items-center justify-between gap-2">
+              <span className="text-xs text-gray-500 dark:text-gray-400 truncate">{item.payee}</span>
+              <span className="text-xs tabular-nums text-gray-500 dark:text-gray-400 flex-shrink-0">
+                {showProgress && item.remaining != null && item.installment_total > 0
+                  ? <><span className="text-gray-400 dark:text-gray-500 mr-1.5">{item.remaining}/{item.installment_total}</span>{formatCurrency(item.monthly_amount, currency, 0)}</>
+                  : showInstallmentCount && item.installment_total > 0
+                  ? `${item.installment_total}x ${formatCurrency(item.monthly_amount, currency, 0)}`
+                  : formatCurrency(item.monthly_amount, currency, 0)
+                }
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function InstallmentPanel({ selectedMonth }: Props) {
+  const { t } = useTranslation();
+  const dateLocale = useDateFnsLocale();
+  const { currency } = useFinance();
+  const monthKey = format(selectedMonth, 'yyyy-MM');
+
+  const { data, isLoading } = useServiceQuery<InstallmentData>(
+    ['get_dashboard_installments', monthKey],
+    {
+      rawQuery: true,
+      queryParams: { p_month: format(selectedMonth, 'yyyy-MM-dd') },
+    }
+  );
+
+  const active   = data?.active           ?? [];
+  const ending   = data?.ending_this_month   ?? [];
+  const starting = data?.starting_this_month ?? [];
+
+  const totalActive    = active.reduce((s, a) => s + a.monthly_amount, 0);
+  const totalFreed     = ending.reduce((s, e) => s + e.monthly_amount, 0);
+  const totalNewBurden = starting.reduce((s, e) => s + e.monthly_amount, 0);
+  const netBurdenChange = totalNewBurden - totalFreed;
+
+
+  const timeline = buildTimeline(active, selectedMonth, dateLocale);
+  const maxTimeline = Math.max(...timeline.map(t => t.total), 1);
+
+  const isEmpty = active.length === 0 && ending.length === 0 && starting.length === 0;
+
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm">
+      <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-4">
+        {t('Installments')}
+      </p>
+
+      {isLoading ? (
+        <div className="space-y-3">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="h-6 bg-gray-100 dark:bg-gray-700 rounded animate-pulse" />
+          ))}
+        </div>
+      ) : isEmpty ? (
+        <p className="text-sm text-gray-400 dark:text-gray-500 py-4 text-center">
+          {t('No active installments')}
+        </p>
+      ) : (
+        <>
+          <div className="space-y-3 mb-5">
+            {active.length > 0 && (
+              <ExpandableSection
+                label={t('Active ({{count}} series)', { count: active.length })}
+                items={active}
+                total={totalActive}
+                totalSuffix="/mo"
+                currency={currency}
+                showProgress
+              />
+            )}
+
+            <ExpandableSection label={t('Ending this month')} items={[...ending].sort((a, b) => b.monthly_amount - a.monthly_amount)} total={totalFreed} currency={currency} showInstallmentCount />
+            <ExpandableSection label={t('Starting this month')} items={[...starting].sort((a, b) => b.monthly_amount - a.monthly_amount)} total={totalNewBurden} currency={currency} showInstallmentCount />
+
+            {(ending.length > 0 || starting.length > 0) && (
+              <div className="flex justify-between items-center border-t border-gray-100 dark:border-gray-700 pt-2">
+                <span className="text-xs font-medium text-gray-500 dark:text-gray-400">{t('Net change next month')}</span>
+                <span className={`text-sm font-medium tabular-nums ${netBurdenChange < 0 ? 'text-emerald-600 dark:text-emerald-400' : netBurdenChange > 0 ? 'text-amber-500' : 'text-gray-500'}`}>
+                  {netBurdenChange > 0 ? '+' : ''}{formatCurrency(netBurdenChange, currency, 0)}/mo
+                </span>
+              </div>
+            )}
+          </div>
+
+          {active.length > 0 && (
+            <>
+              <ResponsiveContainer width="100%" height={100}>
+                <BarChart data={timeline} margin={{ top: 14, right: 0, left: 0, bottom: 0 }}>
+                  <XAxis
+                    dataKey="label"
+                    tick={{ fontSize: 10, fill: '#6B7280' }}
+                    tickLine={false}
+                    axisLine={false}
+                    interval={1}
+                  />
+                  <Tooltip
+                    content={({ active, payload }: any) => {
+                      if (!active || !payload?.length) return null;
+                      const val = payload[0]?.value as number | undefined;
+                      if (val == null) return null;
+                      return (
+                        <div style={{ fontSize: 12, backgroundColor: '#fff', border: '1px solid #E5E7EB', borderRadius: 6, padding: '4px 8px' }}>
+                          {formatCurrency(val, currency, 0)}
+                        </div>
+                      );
+                    }}
+                    cursor={{ fill: 'rgba(0,0,0,0.04)' }}
+                  />
+                  <Bar dataKey="total" radius={[2, 2, 0, 0]}>
+                    <LabelList
+                      dataKey="total"
+                      position="top"
+                      formatter={shortK}
+                      style={{ fontSize: 9, fill: '#6B7280' }}
+                    />
+                    {timeline.map((entry, i) => (
+                      <Cell
+                        key={i}
+                        fill={entry.total === 0 ? '#E5E7EB' : entry.total < maxTimeline * 0.5 ? '#93C5FD' : '#3B82F6'}
+                      />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-3 text-left">{t('12-month obligations')}</p>
+            </>
+          )}
+        </>
+      )}
+    </div>
+  );
+}

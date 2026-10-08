@@ -1,0 +1,9 @@
+from .btg_parser import *  # noqa: F403
+from .c6_global_eur_parser import *  # noqa: F403
+from .c6_global_usd_parser import *  # noqa: F403
+from .c6_parser import *  # noqa: F403
+from .itau_account_parser import *  # noqa: F403
+from .itau_credit_card_excel_parser import *  # noqa: F403
+from .itau_parser import *  # noqa: F403
+from .porto_parser import *  # noqa: F403
+from .xp_parser import *  # noqa: F403

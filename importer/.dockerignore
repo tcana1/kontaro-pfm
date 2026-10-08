@@ -1,0 +1,40 @@
+# Exclude all files by default
+*
+
+# Include only what we need
+!app.py
+!src/
+!requirements.txt
+
+# Explicitly exclude unnecessary directories and files
+archive/
+old_scripts/
+tests/
+.git/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.env
+.env.local
+.env.dev
+.env.prod
+.DS_Store
+*.log
+tmp/
+temp/
+Dockerfile
+docker-compose.yml
+README.md
+*.md

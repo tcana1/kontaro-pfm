@@ -1,0 +1,10 @@
+Detalhamento
+da fatura
+Lançamentos: compras e saques
+FULANO DE TAL (final 1234)
+Data Estabelecimento Valor em R$
+06/02 LOJA ALFA 01/03 BZ 100,00
+24/03 MERCADO BETA 03/06 BZ 90,00
+05/05 RESTAURANTE GAMA 150,00
+05/05 PAGAMENTO -340,00
+Detalhamento geral conforme resolução Banco Central nº 365/2023

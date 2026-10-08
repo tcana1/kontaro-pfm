@@ -1,0 +1,211 @@
+services:
+
+  # ── App ─────────────────────────────────────────────────────────────────────
+  app:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+    ports:
+      - "${APP_PORT:-8181}:80"
+    environment:
+      SUPABASE_URL: ${SUPABASE_URL}
+      # Cloud mode: set SUPABASE_ANON_KEY directly (from Supabase dashboard).
+      # Selfhost mode: leave unset — entrypoint.sh derives it from SUPABASE_JWT_SECRET.
+      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY:-}
+      SUPABASE_JWT_SECRET: ${SUPABASE_JWT_SECRET:-}
+      # Selfhost routing upstreams (default to container names; inert in cloud mode
+      # since supabase-js talks to SUPABASE_URL directly, never hitting these routes).
+      POSTGREST_URL: ${POSTGREST_URL:-http://postgrest:3000}
+      GOTRUE_URL: ${GOTRUE_URL:-http://gotrue:8081}
+      # Set to false in selfhost to hide OAuth provider buttons (Google, GitHub).
+      OAUTH_ENABLED: ${OAUTH_ENABLED:-true}
+      # Optional: auto-login with email/password on first load (no login screen).
+      AUTO_LOGIN_EMAIL: ${AUTO_LOGIN_EMAIL:-}
+      AUTO_LOGIN_PASSWORD: ${AUTO_LOGIN_PASSWORD:-}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  # ── Importer ────────────────────────────────────────────────────────────────
+  importer:
+    build:
+      context: ./importer
+      dockerfile: Dockerfile
+    # No public port — nginx proxies /api/ → importer on the internal network.
+    # Uncomment to expose directly for debugging:
+    # ports:
+    #   - "${IMPORTER_PORT:-8000}:8000"
+    environment:
+      SUPABASE_URL: ${SUPABASE_URL}
+      SUPABASE_JWT_SECRET: ${SUPABASE_JWT_SECRET:-}
+      SECRETS_ENC_KEY: ${SECRETS_ENC_KEY:-}
+      # DB connection for the importer's own queries — a full DSN, distinct from
+      # SUPABASE_DB_URL (which only the one-off `migrate` step uses, over host
+      # networking). Selfhost defaults to the 'db' container. Cloud: set
+      # DATABASE_URL directly to the Session pooler connection string (see README).
+      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:${DB_PASSWORD:-}@db:5432/postgres}
+      # CORS — the browser always reaches the importer same-origin through the
+      # app's /api/ proxy, so this is belt-and-braces. Selfhost: SUPABASE_URL
+      # happens to be the app origin, which makes it a correct allow-list value.
+      CORS_ORIGINS: ${SUPABASE_URL}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+      # Up to 3 comma-separated HH:MM slots, in this container's clock (UTC by
+      # default) for the automatic daily Pluggy sync. Each connector has its
+      # own timezone (set in the UI) used only to interpret Pluggy statement
+      # dates — unrelated to when the sync itself runs. Empty/unset disables
+      # the in-process scheduler — falls back to manual "Sync now" or an
+      # external cron running the CLI.
+      SYNC_TIMES: ${SYNC_TIMES:-}
+      OPENEXCHANGERATES_APP_ID: ${OPENEXCHANGERATES_APP_ID:-}
+      # Tells FastAPI it's mounted at /api/ so /docs loads openapi.json correctly.
+      ROOT_PATH: /api
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      app:
+        condition: service_started
+    restart: unless-stopped
+
+  # ── MCP Server ──────────────────────────────────────────────────────────────
+  mcp:
+    build:
+      context: ./mcp
+      dockerfile: Dockerfile
+    # Bind to loopback only. The app's nginx proxies /mcp on the internal network,
+    # so this port is never exposed publicly; the localhost mapping keeps it reachable
+    # for direct MCP clients / debugging on the host.
+    ports:
+      - "127.0.0.1:${MCP_PORT:-3100}:3100"
+    environment:
+      SUPABASE_JWT_SECRET: ${SUPABASE_JWT_SECRET:-}
+      SUPABASE_URL: ${SUPABASE_URL:-}
+      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY:-}
+      POSTGREST_URL: ${POSTGREST_URL:-}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:${DB_PASSWORD:-}@db:5432/postgres}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  # ── Migrations (init container) ─────────────────────────────────────────────
+  # Applies pending SQL migrations with the pinned Supabase CLI. Runs automatically
+  # on every `docker compose up -d` — idempotent, cheap when there is nothing
+  # pending — and app/importer only start after it completes successfully.
+  # Still available for manual runs:  docker compose run --rm migrate
+  migrate:
+    build:
+      context: ./scripts
+      dockerfile: Dockerfile.migrate
+    volumes:
+      - ./supabase:/app/supabase:ro
+    working_dir: /app
+    environment:
+      # Must be in environment (not just in command) so wait-and-migrate.sh can
+      # inspect the URL and trigger the DB readiness wait in selfhost mode.
+      # Selfhost/dev: set SUPABASE_DB_URL explicitly to 127.0.0.1 (see network_mode
+      # note below — it must differ from DATABASE_URL's 'db' hostname).
+      # Cloud/prod: falls back to DATABASE_URL — same remote host, no need to
+      # duplicate the connection string in .env.
+      SUPABASE_DB_URL: ${SUPABASE_DB_URL:-${DATABASE_URL:-}}
+    command: ["migration", "up", "--db-url", "${SUPABASE_DB_URL:-${DATABASE_URL:-}}"]
+    # Host networking: the CLI only allows plaintext connections to hosts it can
+    # match against supabase/config.toml (default hostname 127.0.0.1). With host
+    # networking, a local Supabase stack is reachable at 127.0.0.1:<db port>.
+    # Harmless for cloud Supabase (remote path uses TLS as usual).
+    # Selfhost: db publishes 127.0.0.1:54332:5432, so this reaches it on the host.
+    # The entrypoint script waits for the DB when SUPABASE_DB_URL targets 127.0.0.1
+    # (selfhost mode) and skips the wait otherwise (cloud).
+    network_mode: host
+    restart: "no"
+
+  # ── Selfhost: Postgres ───────────────────────────────────────────────────────
+  # Supabase-flavored Postgres: creates roles (anon, authenticated, service_role,
+  # authenticator, supabase_auth_admin, …) and schemas (auth, storage, public)
+  # automatically on first boot via built-in init scripts.
+  db:
+    image: supabase/postgres:17.6.1.136
+    profiles: [selfhost]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # Runs after migrate.sh (z- sorts after m-) and sets passwords on roles that
+      # the supabase/postgres init scripts create without passwords (authenticator,
+      # supabase_auth_admin). Only executes on first boot (empty data directory).
+      - ./scripts/db-init-passwords.sh:/docker-entrypoint-initdb.d/z-set-passwords.sh
+    # Published on loopback only so the migrate service (network_mode: host) can
+    # reach it at 127.0.0.1:${DB_PORT:-54332}. DB_PORT is also what
+    # SUPABASE_DB_URL in .env must point to. Override DB_PORT if it clashes —
+    # 54332 is the default of a local `supabase start` stack.
+    ports:
+      - "127.0.0.1:${DB_PORT:-54332}:5432"
+    environment:
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  # ── Selfhost: GoTrue (auth) ──────────────────────────────────────────────────
+  gotrue:
+    image: supabase/gotrue:v2.196.0
+    profiles: [selfhost]
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      GOTRUE_JWT_SECRET: ${SUPABASE_JWT_SECRET}
+      GOTRUE_JWT_AUD: authenticated
+      GOTRUE_JWT_EXP: 3600
+      GOTRUE_DB_DRIVER: postgres
+      DATABASE_URL: postgresql://supabase_auth_admin:${DB_PASSWORD}@db:5432/postgres
+      # Both values are always the same as SUPABASE_URL in selfhost — no extra vars needed.
+      API_EXTERNAL_URL: ${SUPABASE_URL}
+      GOTRUE_SITE_URL: ${SUPABASE_URL}
+      GOTRUE_ENABLE_EMAIL_SIGNUP: "true"
+      # Without SMTP, set to true so users created via kontaro.sh are auto-confirmed.
+      # Set to false (with SMTP configured) to require email verification on signup.
+      GOTRUE_MAILER_AUTOCONFIRM: ${GOTRUE_MAILER_AUTOCONFIRM:-true}
+      # Optional SMTP — enables email-based password reset from the login page.
+      # Without these, use: ./kontaro.sh reset-password <email> <newpassword>
+      GOTRUE_SMTP_HOST: ${GOTRUE_SMTP_HOST:-}
+      GOTRUE_SMTP_PORT: ${GOTRUE_SMTP_PORT:-587}
+      GOTRUE_SMTP_USER: ${GOTRUE_SMTP_USER:-}
+      GOTRUE_SMTP_PASS: ${GOTRUE_SMTP_PASS:-}
+      GOTRUE_SMTP_ADMIN_EMAIL: ${GOTRUE_SMTP_ADMIN_EMAIL:-}
+      GOTRUE_SMTP_SENDER_NAME: ${GOTRUE_SMTP_SENDER_NAME:-Kontaro}
+      # true = closed instance; use kontaro.sh create-user to add accounts.
+      # false = anyone can sign up.
+      GOTRUE_DISABLE_SIGNUP: ${GOTRUE_DISABLE_SIGNUP:-true}
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8081/health || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  # ── Selfhost: PostgREST (REST API) ──────────────────────────────────────────
+  postgrest:
+    image: postgrest/postgrest:v14.17
+    profiles: [selfhost]
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      PGRST_JWT_SECRET: ${SUPABASE_JWT_SECRET}
+      PGRST_DB_URI: postgresql://authenticator:${DB_PASSWORD}@db:5432/postgres
+      PGRST_DB_SCHEMA: public
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_OPENAPI_MODE: disabled
+      PGRST_SERVER_HOST: "0.0.0.0"
+    restart: unless-stopped
+
+volumes:
+  pgdata:

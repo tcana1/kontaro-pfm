@@ -1,0 +1,6 @@
+[lint]
+select = ["E", "F", "I"]
+ignore = [
+  "E501",  # line too long — not enforced on existing codebase
+  "E402",  # module-import-not-at-top — intentional in some places
+]

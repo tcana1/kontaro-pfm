@@ -1,0 +1,16 @@
+Titular Endereço Vencimento
+FULANO DE TAL 01001-000 Se - São Paulo - SP 20/01/2021
+Resumo da sua fatura Cartão XP Visa Infinite R$
+Total da fatura anterior 100,00
+Pagamentos/créditos até a emissão da fatura -100,00
+Despesas até a emissão desta fatura 155,00
+Valor total devido 155,00
+Fatura fechada em Próximo fechamento Melhor dia de compra
+13/01/2021 12/02/2021 13/02/2021
+FULANO DE TAL - 1234*****1234
+Data Descrição R$ US$
+22/12/20 Pagamentos Validos Normais -100,00
+06/01/21 IOF Transacoes Exterior R$ 5,00
+06/01/21 STREAMING LAMBDA 100,00 20,00
+08/01/21 CAFETERIA NI 50,00 0,00
+Subtotal 155,00

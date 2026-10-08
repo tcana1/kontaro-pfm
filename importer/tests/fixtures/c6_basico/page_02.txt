@@ -1,0 +1,8 @@
+Vencimento: 05 de Junho
+Transações do cartão principal
+FULANO DE TAL
+Valores em reais
+10 mar CAFETERIA NI - Parcela 3/10 100,00
+28 mai LOJA ALFA 150,00
+05 mai Pagamento Efetuado 250,00
+Formas de pagamento

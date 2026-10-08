@@ -1,0 +1,51 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+out/
+.next/
+.expo/
+server/public
+vite.config.ts.*
+*.tar.gz
+
+# Lock files — yarn and pnpm lockfiles are not used; package-lock.json is committed
+# so CI can cache npm dependencies reliably.
+yarn.lock
+pnpm-lock.yaml
+
+# Testing
+coverage/
+.nyc_output/
+
+# Environment files
+.env.*
+**/.env*
+!.env.example
+!.env.development
+
+# Database
+scripts/schema.txt
+*.sqlite
+*.sqlite3
+*.db
+
+# Generated
+*.generated.*
+generated/
+__generated__/
+client/src/locales/*_old.json
+
+# Mobile
+*.apk
+*.aab
+*.ipa
+*.xcarchive
+mobile/ios/Pods/
+mobile/android/.gradle/
+mobile/ios/build/
+
+# Project-specific
+layout_references/*

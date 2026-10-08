@@ -1,0 +1,16 @@
+-- Local-only seed. Loaded by `supabase db reset` AFTER all migrations run.
+--
+-- This is NOT the prod data dump — real accounts/transactions are loaded
+-- separately. The migrations are self-sufficient (schema plus lookup tables
+-- like transaction_statuses and account_types are populated by
+-- 20250815_initial_db.sql), so the only thing a fresh local DB is missing is
+-- an auth user for RLS and the payees/tags/transaction_match_candidates FKs.
+--
+-- Add more users or minimal fixtures here if a DB-backed test needs them.
+-- (The current vitest suite mocks Supabase and does not touch this database.)
+
+-- Add a dev user here for local development (email/password set in Supabase Studio).
+-- Example:
+-- INSERT INTO auth.users (id, email, aud, role, created_at, updated_at)
+-- VALUES ('...uuid...', 'dev@example.com', 'authenticated', 'authenticated', now(), now())
+-- ON CONFLICT (id) DO NOTHING;

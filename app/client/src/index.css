@@ -1,0 +1,38 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden; /* Prevent horizontal scrolling */
+  }
+
+  /* Ensure sidebar layout works properly */
+  .layout-main-container {
+    @apply flex-1 flex flex-col min-h-0;
+    max-width: 100%;
+    box-sizing: border-box;
+    transition: margin-left 300ms ease-in-out, width 300ms ease-in-out;
+  }
+
+  /* Desktop: margin and width driven by sidebar mode via data attribute on parent */
+  @media (min-width: 768px) {
+    [data-sidebar-mode="expanded"] .layout-main-container {
+      margin-left: 16rem; /* w-64 */
+      width: calc(100% - 16rem);
+    }
+
+    [data-sidebar-mode="collapsed"] .layout-main-container,
+    [data-sidebar-mode="hover"] .layout-main-container {
+      margin-left: 4rem; /* w-16 */
+      width: calc(100% - 4rem);
+    }
+  }
+}

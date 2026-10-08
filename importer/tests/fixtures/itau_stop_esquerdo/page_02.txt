@@ -1,0 +1,4 @@
+                     Lançamentos: compras e saques Lançamentos: compras e saques
+                     05/01 CAFETERIA NI 100,00   10/01 LOJA ALFA 200,00
+                     06/01 MERCADO BETA 50,00    11/01 RESTAURANTE GAMA 75,00
+               L Total dos lançamentos atuais

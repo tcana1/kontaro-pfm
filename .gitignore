@@ -1,0 +1,64 @@
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*.sublime-workspace
+*.sublime-project
+
+# Dependencies
+node_modules/
+
+# Environment files
+.env
+.env.*
+.env-*
+!.env.example
+!.env.selfhost.example
+
+# DB dumps (kontaro.sh backup)
+backup-*.sql
+
+# Logs
+*.log
+
+# Claude Code / AI tools
+.claude/
+.mcp.json
+
+# Dev runtime (kontaro.sh)
+.dev-pids/
+.dev-logs/
+
+# Local analysis scratch (schema dumps etc.)
+tmp/
+plans/
+
+# Private AI agent instructions
+app/CLAUDE.md
+app/GEMINI.md
+importer/CLAUDE.md
+
+# Internal dev notes (not for public consumption)
+app/TODO.md
+importer/TODO_systemd_timer.md
+importer/MERGE_PLAN.md
+importer/MIGRATION_PLAN.md
+
+# Tool state
+app/.config/
+
+# Generated API spec (served by FastAPI at runtime)
+importer/api-doc.json

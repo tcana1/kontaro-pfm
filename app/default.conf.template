@@ -1,0 +1,129 @@
+# Brute-force protection for the credential endpoints. Only these requests get a non-empty
+# key (an empty key is never limited), so token refreshes and normal reads are unaffected.
+# The key is the TCP peer address: behind a shared reverse proxy every user shares one bucket,
+# which is fine for a household instance and deliberately not trusting a spoofable X-Forwarded-For.
+map "$request_method $request_uri" $pfm_auth_limited {
+    default "";
+    "~^POST /auth/v1/token\?(.*&)?grant_type=password" 1;
+    "~^POST /auth/v1/(signup|recover|otp|magiclink|resend)(\?|$)" 1;
+    "~^PUT /auth/v1/user(\?|$)" 1;
+}
+map $pfm_auth_limited $pfm_auth_key {
+    ""      "";
+    default $binary_remote_addr;
+}
+limit_req_zone $pfm_auth_key zone=pfm_auth:10m rate=10r/m;
+limit_req_status 429;
+
+server {
+    listen 80;
+    server_name _;
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # Docker's embedded DNS — re-resolves upstream hostnames after container restarts.
+    resolver 127.0.0.11 valid=10s;
+
+    # Selfhost upstreams (substituted by entrypoint.sh from POSTGREST_URL / GOTRUE_URL).
+    # In cloud mode these still get set (to default container names), but the routes
+    # are never called — supabase-js talks directly to the cloud URL. Dead route,
+    # inoffensive: DNS resolves only when a request actually arrives.
+    set $pgrst "${POSTGREST_URL}";
+    set $gt    "${GOTRUE_URL}";
+
+    # Proxy /api/ → importer container (internal network, no public port needed).
+    location /api/ {
+        set $upstream http://importer:8000;
+        rewrite ^/api/(.*)$ /$1 break;
+        proxy_pass $upstream;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        # Swagger UI (/api/docs) loads assets from cdn.jsdelivr.net — relax CSP for
+        # this location only. Other security headers are repeated because nginx stops
+        # inheriting parent add_header directives once a child block defines its own.
+        add_header X-Frame-Options            "SAMEORIGIN"   always;
+        add_header X-Content-Type-Options     "nosniff"      always;
+        add_header Referrer-Policy            "strict-origin-when-cross-origin" always;
+        add_header Content-Security-Policy    "default-src 'self'; script-src 'self' 'unsafe-inline' cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' cdn.jsdelivr.net; img-src 'self' data: blob: fastapi.tiangolo.com; connect-src 'self' http: https: wss:; font-src 'self' cdn.jsdelivr.net; object-src 'none'; base-uri 'self'; form-action 'self';" always;
+    }
+
+    # Proxy /mcp → MCP server (agent-facing, Streamable HTTP — same origin as the app,
+    # so AI assistants reach it through the reverse proxy's TLS). No URI rewrite:
+    # the MCP transport itself serves on /mcp.
+    location /mcp {
+        set $upstream http://mcp:3100;
+        proxy_pass $upstream;
+        proxy_http_version 1.1;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_buffering     off;
+        proxy_read_timeout  300s;
+    }
+
+    # Selfhost: proxy PostgREST (REST API).
+    location /rest/v1/ {
+        rewrite ^/rest/v1/(.*)$ /$1 break;
+        proxy_pass $pgrst;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Selfhost: proxy GoTrue (auth).
+    location /auth/v1/ {
+        limit_req zone=pfm_auth burst=5 nodelay;
+        error_page 429 = @pfm_auth_rate_limited;
+        rewrite ^/auth/v1/(.*)$ /$1 break;
+        proxy_pass $gt;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # GoTrue-shaped JSON so supabase-js raises an AuthApiError with status 429; its default
+    # text/html body fails JSON parsing and the status is lost (AuthUnknownError).
+    location @pfm_auth_rate_limited {
+        default_type application/json;
+        return 429 '{"code":429,"error_code":"over_request_rate_limit","msg":"Too many requests. Please wait a minute and try again."}';
+    }
+
+    # Runtime config — must never be served stale.
+    location = /config.js {
+        add_header Cache-Control          "no-store";
+        add_header X-Frame-Options        "SAMEORIGIN"   always;
+        add_header X-Content-Type-Options "nosniff"      always;
+        add_header Referrer-Policy        "strict-origin-when-cross-origin" always;
+        add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' http: https: wss:; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';" always;
+    }
+
+    # SPA fallback — exact-match locations above take priority.
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # Long-lived cache for hashed assets.
+    location /assets/ {
+        expires 1y;
+        add_header Cache-Control              "public, immutable";
+        add_header X-Frame-Options            "SAMEORIGIN"   always;
+        add_header X-Content-Type-Options     "nosniff"      always;
+        add_header Referrer-Policy            "strict-origin-when-cross-origin" always;
+        add_header Content-Security-Policy    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' http: https: wss:; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';" always;
+    }
+
+    # Security headers (inherited by locations that don't override add_header).
+    add_header X-Frame-Options            "SAMEORIGIN"   always;
+    add_header X-Content-Type-Options     "nosniff"      always;
+    add_header Referrer-Policy            "strict-origin-when-cross-origin" always;
+    add_header Content-Security-Policy    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' http: https: wss:; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';" always;
+
+    gzip on;
+    gzip_types text/plain text/css application/javascript application/json image/svg+xml;
+    gzip_min_length 1024;
+}

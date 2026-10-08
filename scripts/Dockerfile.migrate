@@ -1,0 +1,18 @@
+FROM debian:bookworm-slim
+ARG SUPABASE_CLI_VERSION=2.100.1
+ARG TARGETARCH
+
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl postgresql-client \
+    && rm -rf /var/lib/apt/lists/* \
+    && ARCH=$([ "$TARGETARCH" = "arm64" ] && echo "arm64" || echo "amd64") \
+    && FILE="supabase_${SUPABASE_CLI_VERSION}_linux_${ARCH}.tar.gz" \
+    && curl -sSfL "https://github.com/supabase/cli/releases/download/v${SUPABASE_CLI_VERSION}/${FILE}" -o "/tmp/${FILE}" \
+    && curl -sSfL "https://github.com/supabase/cli/releases/download/v${SUPABASE_CLI_VERSION}/checksums.txt" \
+       | grep "${FILE}" | (cd /tmp && sha256sum -c -) \
+    && tar -xz -C /usr/local/bin -f "/tmp/${FILE}" supabase supabase-go \
+    && rm "/tmp/${FILE}"
+
+COPY wait-and-migrate.sh /usr/local/bin/wait-and-migrate.sh
+RUN chmod +x /usr/local/bin/wait-and-migrate.sh
+
+ENTRYPOINT ["/usr/local/bin/wait-and-migrate.sh"]

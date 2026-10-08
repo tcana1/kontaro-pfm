@@ -1,0 +1,7 @@
+window.__PFM_CONFIG__ = {
+  supabaseUrl: '${SUPABASE_URL}',
+  supabaseAnonKey: '${SUPABASE_ANON_KEY}',
+  oauthEnabled: ${OAUTH_ENABLED},
+  autoLoginEmail: '${AUTO_LOGIN_EMAIL}',
+  autoLoginPassword: '${AUTO_LOGIN_PASSWORD}'
+};

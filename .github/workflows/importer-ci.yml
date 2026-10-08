@@ -1,0 +1,42 @@
+name: Importer CI
+
+on:
+  push:
+    branches: [main]
+    paths: ['importer/**']
+  pull_request:
+    branches: [main]
+    paths: ['importer/**']
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./importer
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: importer/requirements-dev.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt ruff
+
+      - name: Lint
+        run: ruff check .
+
+      - name: Run tests
+        env:
+          SECRETS_ENC_KEY: ${{ secrets.CI_SECRETS_ENC_KEY || '' }}
+        run: |
+          SECRETS_ENC_KEY="${SECRETS_ENC_KEY:-$(python3 -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())')}" \
+          python3 -m pytest \
+            --ignore=tests/real-data \
+            -q
