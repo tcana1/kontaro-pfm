@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useDateFnsLocale } from "@/lib/date-fns-locale";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ChartTooltip } from "@/components/ui/chart-tooltip";
 import { Switch } from "@/components/ui/switch";
 import { useServiceQuery } from "@/hooks/useServiceQuery";
 import { useFinance } from "@/contexts/finance-context";
@@ -23,6 +24,8 @@ import { CategoryGroup, Category, Transaction } from "@shared/schema";
 import { computeSpendingTrends, ChartDataEntry } from "./spending-trends-utils";
 import { cn } from "@/lib/utils";
 import { openTransactionDrilldown, parseMonthString } from "@/utils/drilldown-utils";
+import { getDbFilterArray } from "@/lib/report-filters";
+import { ChartLoadingState, ChartEmptyState } from "./chart-states";
 
 interface SpendingTrendsReportProps {
   filters: {
@@ -57,14 +60,6 @@ const SpendingTrendsReport: React.FC<SpendingTrendsReportProps> = ({
     col: number | null;
   }>({ row: null, col: null });
   const [dataViewEnabled, setDataViewEnabled] = useState(true);
-
-  // Convert filter arrays to database format
-  const getDbFilterArray = (filterArray: string[]) => {
-    if (filterArray.includes('all') || filterArray.length === 0) {
-      return null;
-    }
-    return filterArray.map(id => parseInt(id, 10));
-  };
 
   // Fetch transactions
   const { data: spendingData = [], isLoading } = useServiceQuery(
@@ -198,8 +193,7 @@ const SpendingTrendsReport: React.FC<SpendingTrendsReportProps> = ({
       const sortedPayload = [...payload].sort((a, b) => a.value - b.value);
 
       return (
-        <div className="bg-white dark:bg-gray-800 p-3 border border-gray-200 dark:border-gray-700 rounded shadow-sm">
-          <p className="font-medium mb-2">{label}</p>
+        <ChartTooltip title={label} className="p-3">
           {sortedPayload.map((entry: any, index: number) => {
             if (entry.value === 0) return null;
 
@@ -230,7 +224,7 @@ const SpendingTrendsReport: React.FC<SpendingTrendsReportProps> = ({
               <span>{formatCurrency(totalForMonth, currency)}</span>
             </div>
           </div>
-        </div>
+        </ChartTooltip>
       );
     }
     return null;
@@ -252,14 +246,7 @@ const SpendingTrendsReport: React.FC<SpendingTrendsReportProps> = ({
     if (!categoryData) return;
 
     // Convert filter arrays to database format for account filtering
-    const getDbFilterArray = (filterArray: string[]) => {
-      if (filterArray.includes('all') || filterArray.length === 0) {
-        return [];
-      }
-      return filterArray.map(id => parseInt(id, 10));
-    };
-
-    const accountIds = getDbFilterArray(filters.accountIds);
+    const accountIds = getDbFilterArray(filters.accountIds) ?? [];
 
     if (drilldownId) {
       // In drilldown mode, we're showing categories within a group
@@ -297,15 +284,7 @@ const SpendingTrendsReport: React.FC<SpendingTrendsReportProps> = ({
     const month = parseMonthString(monthString);
     if (!month) return;
 
-    // Convert filter arrays to database format for account filtering
-    const getDbFilterArray = (filterArray: string[]) => {
-      if (filterArray.includes('all') || filterArray.length === 0) {
-        return [];
-      }
-      return filterArray.map(id => parseInt(id, 10));
-    };
-
-    const accountIds = getDbFilterArray(filters.accountIds);
+    const accountIds = getDbFilterArray(filters.accountIds) ?? [];
 
     if (drilldownId) {
       // We're drilled down into a specific group
@@ -415,13 +394,9 @@ const SpendingTrendsReport: React.FC<SpendingTrendsReportProps> = ({
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <div className="h-96 flex items-center justify-center">
-            <p>{t('Loading report data...')}</p>
-          </div>
+          <ChartLoadingState />
         ) : reportData.length === 0 ? (
-          <div className="h-96 flex flex-col items-center justify-center text-gray-500 dark:text-gray-400">
-            <p>{t('No expense data available for the selected filters')}</p>
-          </div>
+          <ChartEmptyState message={t('No expense data available for the selected filters')} />
         ) : (
           <>
             <div className="mb-6">

@@ -1,14 +1,17 @@
 import React, { useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ChartTooltip } from "@/components/ui/chart-tooltip";
 import { useFinance } from "@/contexts/finance-context";
 import { useAuth } from "@/contexts/auth-context";
 import { formatCurrency } from "@/lib/currency-formatter";
-import { Chart } from "@/components/ui/chart-js";
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
 import { CategoryGroup, Category, Transaction } from "@shared/schema";
 import { useServiceQuery } from "@/hooks/useServiceQuery";
 import { openTransactionDrilldown } from "@/utils/drilldown-utils";
 import { formatDateRangeLabel, localDateString } from "@/lib/date-utils";
+import { getDbFilterArray } from "@/lib/report-filters";
+import { ChartLoadingState, ChartEmptyState } from "./chart-states";
 
 interface SpendingBreakdownReportProps {
   filters: {
@@ -38,14 +41,6 @@ const SpendingBreakdownReport: React.FC<SpendingBreakdownReportProps> = ({
     unique_months: number;
   };
 
-  // Convert filter arrays to database format
-  const getDbFilterArray = (filterArray: string[]) => {
-    if (filterArray.includes('all') || filterArray.length === 0) {
-      return null;
-    }
-    return filterArray.map(id => parseInt(id, 10));
-  };
-
   const { data: spendingData = [], isLoading } = useServiceQuery<ExpenseBreakdownItem[]>("get_expense_breakdown", {
     rawQuery: true,
     queryParams: {
@@ -65,26 +60,16 @@ const SpendingBreakdownReport: React.FC<SpendingBreakdownReportProps> = ({
     // Sort data by value descending
     const sortedData = [...spendingData].sort((a, b) => a.value - b.value);
 
-    const labels = sortedData.map(d => d.label);
-    const amounts = sortedData.map(d => (d.value * -1) || 0); // Ensure no NaN values
-    const total = amounts.reduce((sum, amount) => sum + amount, 0);
-    const backgroundColor = sortedData.map(d => d.color);
-    const groupIds = sortedData.map(d => d.group_id);
+    const slices = sortedData.map(d => ({
+      name: d.label,
+      value: (d.value * -1) || 0, // Ensure no NaN values
+      color: d.color,
+      groupId: d.group_id,
+    }));
+    const total = slices.reduce((sum, slice) => sum + slice.value, 0);
     const uniqueMonths = sortedData.length > 0 ? sortedData[0].unique_months : 0;
 
-    return {
-      labels,
-      datasets: [
-        {
-          data: amounts,
-          backgroundColor,
-          borderWidth: 1,
-        },
-      ],
-      _groupIds: groupIds,
-      total,
-      uniqueMonths,
-    };
+    return { slices, total, uniqueMonths };
   }, [spendingData]);
 
   // Shared drilldown logic
@@ -98,14 +83,7 @@ const SpendingBreakdownReport: React.FC<SpendingBreakdownReportProps> = ({
   // Handle double-click on table rows for drilldown
   const handleRowDoubleClick = (item: ExpenseBreakdownItem) => {
     // Convert filter arrays to database format for account filtering
-    const getDbFilterArray = (filterArray: string[]) => {
-      if (filterArray.includes('all') || filterArray.length === 0) {
-        return [];
-      }
-      return filterArray.map(id => parseInt(id, 10));
-    };
-
-    const accountIds = getDbFilterArray(filters.accountIds);
+    const accountIds = getDbFilterArray(filters.accountIds) ?? [];
 
     if (drilldownId) {
       // In drilldown mode, we're showing categories within a group
@@ -140,70 +118,23 @@ const SpendingBreakdownReport: React.FC<SpendingBreakdownReportProps> = ({
     }
   };
 
-  // Chart options
-  const options = {
-    responsive: true,
-    maintainAspectRatio: false,
-    onClick: (event: any, elements: any[]) => {
-      //console.log("[!!] Chart clicked", { event, elements });
-      if (!drilldownId && elements && elements.length > 0) {
-        const index = elements[0].index;
-        //console.log("[!!] Clicked element:", elements[0]);
-        //console.log("[!!] Clicked element index:", index);
-        //console.log("[!!] dirlldownid:", drilldownId);
+  const handleSliceClick = (slice: { name: string; groupId: string }) => {
+    if (!drilldownId && slice.groupId) {
+      handleDrilldownToGroup(String(slice.groupId), slice.name);
+    }
+  };
 
-        // Get the groupId directly from our stored array
-        if (chartData?._groupIds && index >= 0) {
-          const clickedGroupId = chartData._groupIds[index];
-          const groupName = chartData.labels[index];
-
-          /*console.log("[!!] Clicked group:", {
-            id: clickedGroupId,
-            name: groupName,
-          });*/
-
-          if (clickedGroupId) {
-            handleDrilldownToGroup(String(clickedGroupId), groupName);
-          }
-        }
-      }
-    },
-    plugins: {
-      legend: {
-        position: "right" as const,
-        labels: {
-          generateLabels: (chart: any) => {
-            const data = chart.data;
-            return data.labels.map((label: string, i: number) => ({
-              text: `${label} (${((data.datasets[0].data[i] / (chartData?.total || 1)) * 100).toFixed(1)}%)`,
-              fillStyle: data.datasets[0].backgroundColor[i],
-              index: i,
-            }));
-          },
-        },
-        onClick: (event: any, legendItem: any) => {
-          if (!drilldownId && chartData?._groupIds && legendItem.index >= 0) {
-            const clickedGroupId = chartData._groupIds[legendItem.index];
-            const groupName = chartData.labels[legendItem.index];
-            if (clickedGroupId) {
-              handleDrilldownToGroup(String(clickedGroupId), groupName);
-            }
-          }
-        },
-      },
-      tooltip: {
-        callbacks: {
-          label: (context: any) => {
-            const amount = context.raw;
-            const percentage = (
-              (amount / (chartData?.total || 1)) *
-              100
-            ).toFixed(1);
-            return `${formatCurrency(amount, currency)} (${percentage}%)`;
-          },
-        },
-      },
-    },
+  const SliceTooltip = ({ active, payload }: any) => {
+    if (!active || !payload?.length || !chartData) return null;
+    const slice = payload[0].payload;
+    return (
+      <ChartTooltip title={slice.name}>
+        <p>{formatCurrency(slice.value, currency)}</p>
+        <p className="text-gray-500 dark:text-gray-400">
+          {((slice.value / (chartData.total || 1)) * 100).toFixed(1)}%
+        </p>
+      </ChartTooltip>
+    );
   };
 
   return (
@@ -235,13 +166,9 @@ const SpendingBreakdownReport: React.FC<SpendingBreakdownReportProps> = ({
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <div className="h-96 flex items-center justify-center">
-            <p>{t('Loading report data...')}</p>
-          </div>
+          <ChartLoadingState />
         ) : !chartData ? (
-          <div className="h-96 flex flex-col items-center justify-center text-gray-500 dark:text-gray-400">
-            <p>{t('No expense data available for the selected filters')}</p>
-          </div>
+          <ChartEmptyState message={t('No expense data available for the selected filters')} />
         ) : (
           <>
             <div className="mb-6">
@@ -265,7 +192,38 @@ const SpendingBreakdownReport: React.FC<SpendingBreakdownReportProps> = ({
             </div>
 
             <div className="h-80">
-              <Chart type="doughnut" data={chartData} options={options} />
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={chartData.slices}
+                    dataKey="value"
+                    nameKey="name"
+                    innerRadius="45%"
+                    outerRadius="90%"
+                    stroke="hsl(var(--card))"
+                    strokeWidth={1}
+                    onClick={(_, index) => handleSliceClick(chartData.slices[index])}
+                    className={!drilldownId ? "cursor-pointer" : undefined}
+                  >
+                    {chartData.slices.map((slice, index) => (
+                      <Cell key={`cell-${index}`} fill={slice.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip content={<SliceTooltip />} />
+                  <Legend
+                    layout="vertical"
+                    verticalAlign="middle"
+                    align="right"
+                    formatter={(value, _entry, index) => (
+                      <span className="text-sm text-gray-700 dark:text-gray-300">
+                        {value} ({((chartData.slices[index].value / (chartData.total || 1)) * 100).toFixed(1)}%)
+                      </span>
+                    )}
+                    onClick={(_, index) => handleSliceClick(chartData.slices[index])}
+                    wrapperStyle={!drilldownId ? { cursor: "pointer" } : undefined}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
             </div>
 
             <div className="mt-6">

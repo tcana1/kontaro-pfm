@@ -9,6 +9,7 @@ import { useServiceQuery } from '@/hooks/useServiceQuery';
 import { useFinance } from '@/contexts/finance-context';
 import { formatCurrency } from '@/lib/currency-formatter';
 import { openTransactionDrilldown } from '@/utils/drilldown-utils';
+import { ChartTooltip } from '@/components/ui/chart-tooltip';
 
 const DEFAULT_VISIBLE = 5;
 
@@ -58,14 +59,14 @@ function SparklineTooltip({ active, payload, currency }: any) {
   const d = payload[0]?.payload as { month: string; net: number } | undefined;
   if (!d) return null;
   return (
-    <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-2 py-1.5 text-xs shadow-md pointer-events-none">
-      <p className="font-medium text-gray-700 dark:text-gray-300 mb-0.5">
-        {format(parseISO(d.month + '-01'), 'MMM yy', { locale: dateLocale })}
-      </p>
+    <ChartTooltip
+      title={format(parseISO(d.month + '-01'), 'MMM yy', { locale: dateLocale })}
+      className="px-2 py-1.5 text-xs pointer-events-none"
+    >
       <p className="tabular-nums text-gray-600 dark:text-gray-400">
         {formatCurrency(d.net, currency, 0)}
       </p>
-    </div>
+    </ChartTooltip>
   );
 }
 

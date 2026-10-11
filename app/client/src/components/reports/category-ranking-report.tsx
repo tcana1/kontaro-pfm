@@ -8,6 +8,8 @@ import { formatDateRangeLabel, localDateString } from "@/lib/date-utils";
 import { openTransactionDrilldown } from "@/utils/drilldown-utils";
 import { supabaseService } from "@/services/supabase-service";
 import { ChevronDown, ChevronRight } from "lucide-react";
+import { getDbFilterArray } from "@/lib/report-filters";
+import { ChartLoadingState, ChartEmptyState } from "./chart-states";
 
 interface CategoryRankingReportProps {
   filters: {
@@ -83,14 +85,6 @@ const CategoryRankingReport: React.FC<CategoryRankingReportProps> = ({
     return formatDateRangeLabel(filters.startDate, filters.endDate, userLocale, dateFormat, t('All Time'));
   })();
 
-  // Convert filter arrays to database format
-  const getDbFilterArray = (filterArray: string[]) => {
-    if (filterArray.includes('all') || filterArray.length === 0) {
-      return null;
-    }
-    return filterArray.map(id => parseInt(id, 10));
-  };
-
   // Fetch ranking data
   const queryParams = {
     start_date: localDateString(filters.startDate),
@@ -146,14 +140,7 @@ const CategoryRankingReport: React.FC<CategoryRankingReportProps> = ({
     if (!category) return;
 
     // Convert filter arrays to database format for account filtering
-    const getDbFilterArray = (filterArray: string[]) => {
-      if (filterArray.includes('all') || filterArray.length === 0) {
-        return [];
-      }
-      return filterArray.map(id => parseInt(id, 10));
-    };
-
-    const accountIds = getDbFilterArray(filters.accountIds);
+    const accountIds = getDbFilterArray(filters.accountIds) ?? [];
 
     openTransactionDrilldown({
       startDate: filters.startDate,
@@ -229,13 +216,9 @@ const CategoryRankingReport: React.FC<CategoryRankingReportProps> = ({
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <div className="h-96 flex items-center justify-center">
-            <p>{t('Loading ranking data...')}</p>
-          </div>
+          <ChartLoadingState />
         ) : !rankingData || rankingData.length === 0 ? (
-          <div className="h-96 flex flex-col items-center justify-center text-gray-500 dark:text-gray-400">
-            <p>{t('No ranking data available for the selected filters')}</p>
-          </div>
+          <ChartEmptyState message={t('No ranking data available for the selected filters')} />
         ) : (
           <div className="space-y-6">
             {/* Sort Options */}

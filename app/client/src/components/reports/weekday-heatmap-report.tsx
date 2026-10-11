@@ -5,8 +5,9 @@ import { useServiceQuery } from "@/hooks/useServiceQuery";
 import { useFinance } from "@/contexts/finance-context";
 import { localDateString } from "@/lib/date-utils";
 import { formatCurrency } from "@/lib/currency-formatter";
-import { Spinner } from "@/components/ui/spinner";
 import { openTransactionDrilldown } from "@/utils/drilldown-utils";
+import { getDbFilterArray } from "@/lib/report-filters";
+import { ChartLoadingState, ChartEmptyState } from "./chart-states";
 
 interface WeekdayHeatmapReportProps {
   filters: {
@@ -48,19 +49,17 @@ function getMonthLabel(monthStr: string, locale: string): string {
   return `${mon} ${yr}`;
 }
 
-// Interpolates from light blue (#d7e1fe) to dark navy (#1e40af)
+// Colors come from CSS variables (set on the card content) so the ramp follows the theme:
+// light = pale blue -> navy, dark = slate -> vivid blue.
 function getCellBg(value: number, max: number): string {
   if (max === 0 || value === 0) return "transparent";
-  const t = value / max;
-  const r = Math.round(215 + (30 - 215) * t);
-  const g = Math.round(225 + (64 - 225) * t);
-  const b = Math.round(254 + (175 - 254) * t);
-  return `rgb(${r},${g},${b})`;
+  const pct = Math.round((value / max) * 100);
+  return `color-mix(in srgb, var(--heat-high) ${pct}%, var(--heat-low))`;
 }
 
 function getCellFg(value: number, max: number): string {
   if (max === 0 || value === 0) return "inherit";
-  return value / max > 0.55 ? "#ffffff" : "#1e3a8a";
+  return value / max > 0.55 ? "var(--heat-fg-strong)" : "var(--heat-fg-soft)";
 }
 
 const WeekdayHeatmapReport: React.FC<WeekdayHeatmapReportProps> = ({
@@ -75,11 +74,6 @@ const WeekdayHeatmapReport: React.FC<WeekdayHeatmapReportProps> = ({
   const [maxTotal, setMaxTotal] = useState(0);
   const [maxAverage, setMaxAverage] = useState(0);
   const [viewMode, setViewMode] = useState<ViewMode>("average");
-
-  const getDbFilterArray = (filterArray: string[]) => {
-    if (filterArray.includes("all") || filterArray.length === 0) return null;
-    return filterArray.map((id) => parseInt(id, 10));
-  };
 
   const handleCellDoubleClick = (month: string) => {
     const accountIds = getDbFilterArray(filters.accountIds) ?? [];
@@ -140,16 +134,16 @@ const WeekdayHeatmapReport: React.FC<WeekdayHeatmapReportProps> = ({
 
   if (isLoading) {
     return (
-      <Card className="p-4 h-[400px] flex items-center justify-center">
-        <Spinner size="lg" />
+      <Card className="p-4">
+        <ChartLoadingState className="h-[400px]" />
       </Card>
     );
   }
 
   if (!data || sortedMonths.length === 0) {
     return (
-      <Card className="p-4 h-[400px] flex items-center justify-center">
-        <p className="text-muted-foreground">{t('No spending data for this period')}</p>
+      <Card className="p-4">
+        <ChartEmptyState className="h-[400px]" message={t('No spending data for this period')} />
       </Card>
     );
   }
@@ -185,7 +179,7 @@ const WeekdayHeatmapReport: React.FC<WeekdayHeatmapReportProps> = ({
           </div>
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="[--heat-low:#d7e1fe] [--heat-high:#1e40af] [--heat-fg-soft:#1e3a8a] [--heat-fg-strong:#ffffff] dark:[--heat-low:#1e293b] dark:[--heat-high:#2563eb] dark:[--heat-fg-soft:#e2e8f0] dark:[--heat-fg-strong:#ffffff]">
         <div className="overflow-x-auto">
           <table className="w-full border-collapse">
             <thead>
@@ -245,8 +239,7 @@ const WeekdayHeatmapReport: React.FC<WeekdayHeatmapReportProps> = ({
           <div
             className="h-3 w-32 rounded"
             style={{
-              background:
-                "linear-gradient(to right, rgb(215,225,254), rgb(30,64,175))",
+              background: "linear-gradient(to right, var(--heat-low), var(--heat-high))",
             }}
           />
           <span className="text-xs text-muted-foreground">{t('high')}</span>

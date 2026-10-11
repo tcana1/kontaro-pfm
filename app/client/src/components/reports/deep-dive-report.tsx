@@ -3,13 +3,15 @@ import { useTranslation } from "react-i18next";
 import { useDateFnsLocale } from "@/lib/date-fns-locale";
 import MerchantScatterReport from "@/components/reports/merchant-scatter-report";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ChartTooltipList } from "@/components/ui/chart-tooltip";
 import { useServiceQuery } from "@/hooks/useServiceQuery";
 import { useFinance } from "@/contexts/finance-context";
-import { localDateString } from "@/lib/date-utils";
+import { localDateString, isAllTimeStart, daysBetween } from "@/lib/date-utils";
 import { formatCurrency } from "@/lib/currency-formatter";
-import { Spinner } from "@/components/ui/spinner";
 import { openTransactionDrilldown } from "@/utils/drilldown-utils";
 import { format, parseISO } from "date-fns";
+import { getDbFilterArray } from "@/lib/report-filters";
+import { ChartLoadingState, ChartEmptyState } from "./chart-states";
 import {
   BarChart,
   Bar,
@@ -39,11 +41,6 @@ interface DeepDiveReportProps {
   filters: Filters;
 }
 
-function getDbFilterArray(arr: string[]): number[] | null {
-  if (arr.includes("all") || arr.length === 0) return null;
-  return arr.map((id) => parseInt(id, 10));
-}
-
 function buildQueryParams(filters: Filters) {
   return {
     start_date: localDateString(filters.startDate),
@@ -62,8 +59,8 @@ const ChartSkeleton: React.FC<{ title: string }> = ({ title }) => (
     <CardHeader>
       <CardTitle className="text-base">{title}</CardTitle>
     </CardHeader>
-    <CardContent className="flex items-center justify-center h-[280px]">
-      <Spinner size="lg" />
+    <CardContent>
+      <ChartLoadingState className="h-[280px]" />
     </CardContent>
   </Card>
 );
@@ -75,8 +72,8 @@ const ChartEmpty: React.FC<{ title: string }> = ({ title }) => {
       <CardHeader>
         <CardTitle className="text-base">{title}</CardTitle>
       </CardHeader>
-      <CardContent className="flex items-center justify-center h-[280px]">
-        <p className="text-sm text-muted-foreground">{t('No data for this period')}</p>
+      <CardContent>
+        <ChartEmptyState className="h-[280px]" message={t('No data for this period')} />
       </CardContent>
     </Card>
   );
@@ -142,6 +139,7 @@ const HistogramChart: React.FC<{ filters: Filters }> = ({ filters }) => {
             <XAxis dataKey="bucket_label" tick={{ fontSize: 11 }} />
             <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
             <Tooltip
+              content={<ChartTooltipList />}
               formatter={(value: number) => [value, t('Transactions')]}
               cursor={{ fill: "rgba(59,130,246,0.1)" }}
             />
@@ -158,16 +156,6 @@ const HistogramChart: React.FC<{ filters: Filters }> = ({ filters }) => {
 
 type DailySpendRow = { date: string; daily_total: number };
 
-function generateDailyRange(start: Date, end: Date): string[] {
-  const dates: string[] = [];
-  const current = new Date(start);
-  while (current <= end) {
-    dates.push(format(current, "yyyy-MM-dd"));
-    current.setDate(current.getDate() + 1);
-  }
-  return dates;
-}
-
 const RollingSpendChart: React.FC<{ filters: Filters }> = ({ filters }) => {
   const { t } = useTranslation();
   const dateLocale = useDateFnsLocale();
@@ -182,7 +170,10 @@ const RollingSpendChart: React.FC<{ filters: Filters }> = ({ filters }) => {
       return { chartData: [], avgLine: 0, tooShort: false };
 
     const rows = data as DailySpendRow[];
-    const allDays = generateDailyRange(filters.startDate, filters.endDate);
+    // "All Time" starts in 1900: begin at the first day with spending instead of plotting ~46k empty days.
+    const firstSpendDay = rows.reduce((min, r) => (r.date < min ? r.date : min), rows[0].date);
+    const startDay = isAllTimeStart(filters.startDate) ? firstSpendDay : localDateString(filters.startDate);
+    const allDays = daysBetween(startDay, localDateString(filters.endDate));
     const tooShort = allDays.length < 30;
 
     const rawMap = new Map(rows.map((r) => [r.date, Number(r.daily_total)]));
@@ -232,14 +223,16 @@ const RollingSpendChart: React.FC<{ filters: Filters }> = ({ filters }) => {
               tickFormatter={(v) => (v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v))}
             />
             <Tooltip
+              content={<ChartTooltipList />}
               labelFormatter={(d) => format(parseISO(d as string), "PP", { locale: dateLocale })}
               formatter={(v: number, name: string) => [formatCurrency(v, currency), name]}
             />
             <Area
               type="monotone"
               dataKey="rolling"
-              name="30-day rolling"
-              fill="#bfdbfe"
+              name={t("30-day rolling")}
+              fill="#3b82f6"
+              fillOpacity={0.25}
               stroke="#3b82f6"
               strokeWidth={2}
               dot={false}
@@ -248,7 +241,7 @@ const RollingSpendChart: React.FC<{ filters: Filters }> = ({ filters }) => {
               y={avgLine}
               stroke="#ef4444"
               strokeDasharray="6 3"
-              label={{ value: "Avg", position: "insideTopRight", fontSize: 10, fill: "#ef4444" }}
+              label={{ value: t("Avg"), position: "insideTopRight", fontSize: 10, fill: "#ef4444" }}
             />
           </ComposedChart>
         </ResponsiveContainer>
@@ -259,13 +252,13 @@ const RollingSpendChart: React.FC<{ filters: Filters }> = ({ filters }) => {
 
 // ── Chart 3: Multi-Year Seasonal Pattern ──────────────────────────────────────
 
-const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const YEAR_COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899"];
 
 type SeasonalRow = { year: number; month: number; total: number };
 
 const SeasonalPatternChart: React.FC<{ filters: Filters }> = ({ filters }) => {
   const { t } = useTranslation();
+  const dateLocale = useDateFnsLocale();
   const { currency } = useFinance();
   const { data, isLoading } = useServiceQuery("get_seasonal_pattern", {
     rawQuery: true,
@@ -276,6 +269,7 @@ const SeasonalPatternChart: React.FC<{ filters: Filters }> = ({ filters }) => {
     if (!Array.isArray(data) || data.length === 0)
       return { chartData: [], years: [] as number[], highestMonth: null as null | { label: string; year: number; value: number }, consistentMonth: null as null | { label: string } };
 
+    const monthLabels = Array.from({ length: 12 }, (_, i) => format(new Date(2000, i, 1), "MMM", { locale: dateLocale }));
     const rows = data as SeasonalRow[];
     const yearSet = [...new Set(rows.map((r) => r.year))].sort();
 
@@ -283,7 +277,7 @@ const SeasonalPatternChart: React.FC<{ filters: Filters }> = ({ filters }) => {
     for (let m = 1; m <= 12; m++) pivot.set(m, new Map());
     rows.forEach(({ year, month, total }) => pivot.get(month)!.set(year, Number(total)));
 
-    const chartData = MONTH_LABELS.map((label, i) => {
+    const chartData = monthLabels.map((label, i) => {
       const m = i + 1;
       const entry: Record<string, any> = { month: label };
       yearSet.forEach((y) => {
@@ -297,7 +291,7 @@ const SeasonalPatternChart: React.FC<{ filters: Filters }> = ({ filters }) => {
     rows.forEach(({ year, month, total }) => {
       const v = Number(total);
       if (!highestMonth || v > highestMonth.value) {
-        highestMonth = { label: MONTH_LABELS[month - 1], year, value: v };
+        highestMonth = { label: monthLabels[month - 1], year, value: v };
       }
     });
 
@@ -312,13 +306,13 @@ const SeasonalPatternChart: React.FC<{ filters: Filters }> = ({ filters }) => {
         const stddev = Math.sqrt(vals.reduce((s, v) => s + (v - avg) ** 2, 0) / vals.length);
         if (stddev < minStddev) {
           minStddev = stddev;
-          consistentMonth = { label: MONTH_LABELS[m - 1] };
+          consistentMonth = { label: monthLabels[m - 1] };
         }
       }
     }
 
     return { chartData, years: yearSet, highestMonth, consistentMonth };
-  }, [data]);
+  }, [data, dateLocale]);
 
   if (isLoading) return <ChartSkeleton title={t('Multi-Year Seasonal Pattern')} />;
   if (chartData.length === 0) return <ChartEmpty title={t('Multi-Year Seasonal Pattern')} />;
@@ -348,7 +342,7 @@ const SeasonalPatternChart: React.FC<{ filters: Filters }> = ({ filters }) => {
               tick={{ fontSize: 11 }}
               tickFormatter={(v) => (v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v))}
             />
-            <Tooltip formatter={(v: number) => [formatCurrency(v, currency), ""]} />
+            <Tooltip content={<ChartTooltipList />} formatter={(v: number) => [formatCurrency(v, currency), ""]} />
             <Legend />
             {years.map((year, i) => (
               <Line
@@ -447,13 +441,14 @@ const TicketSizeChart: React.FC<{ filters: Filters }> = ({ filters }) => {
               tick={{ fontSize: 11 }}
               tickFormatter={(v) => (v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v))}
             />
-            <Tooltip formatter={(v: number, name: string) => [formatCurrency(v, currency), name]} />
+            <Tooltip content={<ChartTooltipList />} formatter={(v: number, name: string) => [formatCurrency(v, currency), name]} />
             <Legend />
             <Area
               type="monotone"
               dataKey="mean_ticket"
-              name="Mean"
-              fill="#bfdbfe"
+              name={t("Mean")}
+              fill="#3b82f6"
+              fillOpacity={0.25}
               stroke="#3b82f6"
               strokeWidth={2}
               dot={false}
@@ -461,7 +456,7 @@ const TicketSizeChart: React.FC<{ filters: Filters }> = ({ filters }) => {
             <Line
               type="monotone"
               dataKey="median_ticket"
-              name="Median"
+              name={t("Median")}
               stroke="#10b981"
               strokeWidth={2}
               dot={{ r: 3 }}

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ChartTooltip } from "@/components/ui/chart-tooltip";
 import {
   ScatterChart,
   Scatter,
@@ -16,8 +17,9 @@ import { useServiceQuery } from "@/hooks/useServiceQuery";
 import { useFinance } from "@/contexts/finance-context";
 import { localDateString } from "@/lib/date-utils";
 import { formatCurrency } from "@/lib/currency-formatter";
-import { Spinner } from "@/components/ui/spinner";
 import { openTransactionDrilldown } from "@/utils/drilldown-utils";
+import { getDbFilterArray } from "@/lib/report-filters";
+import { ChartLoadingState, ChartEmptyState } from "./chart-states";
 
 interface MerchantScatterReportProps {
   filters: {
@@ -105,12 +107,11 @@ const CustomTooltip = ({
   const d: ScatterPoint = payload[0]?.payload;
   if (!d) return null;
   return (
-    <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-sm p-3 text-sm">
-      <p className="font-semibold mb-1">{d.payee}</p>
+    <ChartTooltip title={d.payee} className="p-3">
       <p className="text-muted-foreground">{t('Visits:')} <span className="text-foreground font-medium">{d.visit_count}</span></p>
       <p className="text-muted-foreground">{t('Avg/visit:')} <span className="text-foreground font-medium">{formatCurrency(d.avg_per_visit, currency as any)}</span></p>
       <p className="text-muted-foreground">{t('Total:')} <span className="text-foreground font-medium">{formatCurrency(d.total_spent, currency as any)}</span></p>
-    </div>
+    </ChartTooltip>
   );
 };
 
@@ -125,11 +126,6 @@ const MerchantScatterReport: React.FC<MerchantScatterReportProps> = ({
   const noFilterSelected =
     (filters.categoryIds.includes("all") || filters.categoryIds.length === 0) &&
     (filters.groupIds.includes("all") || filters.groupIds.length === 0);
-
-  const getDbFilterArray = (filterArray: string[]) => {
-    if (filterArray.includes("all") || filterArray.length === 0) return null;
-    return filterArray.map((id) => parseInt(id, 10));
-  };
 
   const queryParams = {
     start_date: localDateString(filters.startDate),
@@ -217,16 +213,16 @@ const MerchantScatterReport: React.FC<MerchantScatterReportProps> = ({
 
   if (isLoading) {
     return (
-      <Card className="p-4 h-[420px] flex items-center justify-center">
-        <Spinner size="lg" />
+      <Card className="p-4">
+        <ChartLoadingState className="h-[420px]" />
       </Card>
     );
   }
 
   if (!allPoints.length) {
     return (
-      <Card className="p-4 h-[420px] flex items-center justify-center">
-        <p className="text-muted-foreground">{t('No merchant data for this period')}</p>
+      <Card className="p-4">
+        <ChartEmptyState className="h-[420px]" message={t('No merchant data for this period')} />
       </Card>
     );
   }

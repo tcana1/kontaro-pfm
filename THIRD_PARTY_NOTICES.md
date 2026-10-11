@@ -289,7 +289,6 @@ The following packages are used only at build/dev time and declare no license (`
 - `character-entities-html4@2.1.0` — Titus Wormer
 - `character-entities-legacy@3.0.0` — Titus Wormer
 - `character-reference-invalid@2.0.1` — Titus Wormer
-- `chart.js@4.5.0`
 - `check-error@2.1.1` — Jake Luer
 - `cheerio@1.2.0` — Matt Mueller
 - `chokidar@3.6.0` — Paul Miller
@@ -536,7 +535,6 @@ The following packages are used only at build/dev time and declare no license (`
 - `queue-microtask@1.2.3` — Feross Aboukhadijeh
 - `quick-temp@0.1.9` — Jo Liss
 - `react@18.3.1`
-- `react-chartjs-2@5.3.0` — Jeremy Ayerst
 - `react-day-picker@8.10.1` — Giampaolo Bellavite
 - `react-dom@18.3.1`
 - `react-hook-form@7.62.0` — Beier

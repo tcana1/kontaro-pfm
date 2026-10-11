@@ -34,7 +34,7 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({
   return (
     <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
       <PopoverTrigger asChild>
-        <Button variant="outline" className="h-9 w-[220px] justify-start">
+        <Button variant="outline" className="h-9 min-w-[220px] shrink-0 justify-start">
           <CalendarIcon className="mr-2 h-4 w-4" />
           {getDisplayText()}
         </Button>

@@ -326,6 +326,24 @@ export function localDateString(date: Date): string {
 }
 
 /**
+ * Every YYYY-MM-DD from startDay to endDay, inclusive. Steps in UTC: stepping local Dates
+ * with setDate() drifts the time of day across historical offset/DST changes (e.g. America/Sao_Paulo
+ * since 1900) and can push the cursor past an end date at midnight, dropping the last day.
+ */
+export function daysBetween(startDay: string, endDay: string): string[] {
+  const toUtc = (day: string) => {
+    const [y, m, d] = day.split('-').map(Number);
+    return Date.UTC(y, m - 1, d);
+  };
+  const days: string[] = [];
+  const last = toUtc(endDay);
+  for (let t = toUtc(startDay); t <= last; t += 86_400_000) {
+    days.push(new Date(t).toISOString().slice(0, 10));
+  }
+  return days;
+}
+
+/**
  * Parse a YYYY-MM-DD string into a Date at local midnight — the inverse of
  * localDateString(). `new Date('2026-03-01')` is not equivalent: the date-only ISO
  * form is specified to parse as UTC, so it lands on the previous day for every
