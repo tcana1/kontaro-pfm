@@ -239,7 +239,8 @@ const RollingSpendChart: React.FC<{ filters: Filters }> = ({ filters }) => {
               type="monotone"
               dataKey="rolling"
               name="30-day rolling"
-              fill="#bfdbfe"
+              fill="#3b82f6"
+              fillOpacity={0.25}
               stroke="#3b82f6"
               strokeWidth={2}
               dot={false}
@@ -453,7 +454,8 @@ const TicketSizeChart: React.FC<{ filters: Filters }> = ({ filters }) => {
               type="monotone"
               dataKey="mean_ticket"
               name="Mean"
-              fill="#bfdbfe"
+              fill="#3b82f6"
+              fillOpacity={0.25}
               stroke="#3b82f6"
               strokeWidth={2}
               dot={false}

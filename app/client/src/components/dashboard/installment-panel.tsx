@@ -206,7 +206,7 @@ export default function InstallmentPanel({ selectedMonth }: Props) {
                       const val = payload[0]?.value as number | undefined;
                       if (val == null) return null;
                       return (
-                        <div style={{ fontSize: 12, backgroundColor: '#fff', border: '1px solid #E5E7EB', borderRadius: 6, padding: '4px 8px' }}>
+                        <div className="text-xs bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-md px-2 py-1">
                           {formatCurrency(val, currency, 0)}
                         </div>
                       );
