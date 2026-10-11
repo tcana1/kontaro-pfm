@@ -10,6 +10,8 @@ import { CategoryGroup, Category, Transaction } from "@shared/schema";
 import { useServiceQuery } from "@/hooks/useServiceQuery";
 import { openTransactionDrilldown } from "@/utils/drilldown-utils";
 import { formatDateRangeLabel, localDateString } from "@/lib/date-utils";
+import { getDbFilterArray } from "@/lib/report-filters";
+import { ChartLoadingState, ChartEmptyState } from "./chart-states";
 
 interface SpendingBreakdownReportProps {
   filters: {
@@ -37,14 +39,6 @@ const SpendingBreakdownReport: React.FC<SpendingBreakdownReportProps> = ({
     group_id: string;
     color: string;
     unique_months: number;
-  };
-
-  // Convert filter arrays to database format
-  const getDbFilterArray = (filterArray: string[]) => {
-    if (filterArray.includes('all') || filterArray.length === 0) {
-      return null;
-    }
-    return filterArray.map(id => parseInt(id, 10));
   };
 
   const { data: spendingData = [], isLoading } = useServiceQuery<ExpenseBreakdownItem[]>("get_expense_breakdown", {
@@ -89,14 +83,7 @@ const SpendingBreakdownReport: React.FC<SpendingBreakdownReportProps> = ({
   // Handle double-click on table rows for drilldown
   const handleRowDoubleClick = (item: ExpenseBreakdownItem) => {
     // Convert filter arrays to database format for account filtering
-    const getDbFilterArray = (filterArray: string[]) => {
-      if (filterArray.includes('all') || filterArray.length === 0) {
-        return [];
-      }
-      return filterArray.map(id => parseInt(id, 10));
-    };
-
-    const accountIds = getDbFilterArray(filters.accountIds);
+    const accountIds = getDbFilterArray(filters.accountIds) ?? [];
 
     if (drilldownId) {
       // In drilldown mode, we're showing categories within a group
@@ -179,13 +166,9 @@ const SpendingBreakdownReport: React.FC<SpendingBreakdownReportProps> = ({
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <div className="h-96 flex items-center justify-center">
-            <p>{t('Loading report data...')}</p>
-          </div>
+          <ChartLoadingState />
         ) : !chartData ? (
-          <div className="h-96 flex flex-col items-center justify-center text-gray-500 dark:text-gray-400">
-            <p>{t('No expense data available for the selected filters')}</p>
-          </div>
+          <ChartEmptyState message={t('No expense data available for the selected filters')} />
         ) : (
           <>
             <div className="mb-6">

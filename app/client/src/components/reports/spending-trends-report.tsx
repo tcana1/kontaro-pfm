@@ -24,6 +24,8 @@ import { CategoryGroup, Category, Transaction } from "@shared/schema";
 import { computeSpendingTrends, ChartDataEntry } from "./spending-trends-utils";
 import { cn } from "@/lib/utils";
 import { openTransactionDrilldown, parseMonthString } from "@/utils/drilldown-utils";
+import { getDbFilterArray } from "@/lib/report-filters";
+import { ChartLoadingState, ChartEmptyState } from "./chart-states";
 
 interface SpendingTrendsReportProps {
   filters: {
@@ -58,14 +60,6 @@ const SpendingTrendsReport: React.FC<SpendingTrendsReportProps> = ({
     col: number | null;
   }>({ row: null, col: null });
   const [dataViewEnabled, setDataViewEnabled] = useState(true);
-
-  // Convert filter arrays to database format
-  const getDbFilterArray = (filterArray: string[]) => {
-    if (filterArray.includes('all') || filterArray.length === 0) {
-      return null;
-    }
-    return filterArray.map(id => parseInt(id, 10));
-  };
 
   // Fetch transactions
   const { data: spendingData = [], isLoading } = useServiceQuery(
@@ -252,14 +246,7 @@ const SpendingTrendsReport: React.FC<SpendingTrendsReportProps> = ({
     if (!categoryData) return;
 
     // Convert filter arrays to database format for account filtering
-    const getDbFilterArray = (filterArray: string[]) => {
-      if (filterArray.includes('all') || filterArray.length === 0) {
-        return [];
-      }
-      return filterArray.map(id => parseInt(id, 10));
-    };
-
-    const accountIds = getDbFilterArray(filters.accountIds);
+    const accountIds = getDbFilterArray(filters.accountIds) ?? [];
 
     if (drilldownId) {
       // In drilldown mode, we're showing categories within a group
@@ -297,15 +284,7 @@ const SpendingTrendsReport: React.FC<SpendingTrendsReportProps> = ({
     const month = parseMonthString(monthString);
     if (!month) return;
 
-    // Convert filter arrays to database format for account filtering
-    const getDbFilterArray = (filterArray: string[]) => {
-      if (filterArray.includes('all') || filterArray.length === 0) {
-        return [];
-      }
-      return filterArray.map(id => parseInt(id, 10));
-    };
-
-    const accountIds = getDbFilterArray(filters.accountIds);
+    const accountIds = getDbFilterArray(filters.accountIds) ?? [];
 
     if (drilldownId) {
       // We're drilled down into a specific group
@@ -415,13 +394,9 @@ const SpendingTrendsReport: React.FC<SpendingTrendsReportProps> = ({
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <div className="h-96 flex items-center justify-center">
-            <p>{t('Loading report data...')}</p>
-          </div>
+          <ChartLoadingState />
         ) : reportData.length === 0 ? (
-          <div className="h-96 flex flex-col items-center justify-center text-gray-500 dark:text-gray-400">
-            <p>{t('No expense data available for the selected filters')}</p>
-          </div>
+          <ChartEmptyState message={t('No expense data available for the selected filters')} />
         ) : (
           <>
             <div className="mb-6">

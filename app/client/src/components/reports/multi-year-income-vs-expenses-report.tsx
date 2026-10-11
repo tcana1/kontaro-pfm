@@ -5,6 +5,8 @@ import { useServiceQuery } from "@/hooks/useServiceQuery";
 import { useFinance } from "@/contexts/finance-context";
 import { formatCurrency, roundDown } from "@/lib/currency-formatter";
 import { formatDateRangeLabel, localDateString } from "@/lib/date-utils";
+import { getDbFilterArray } from "@/lib/report-filters";
+import { ChartLoadingState, ChartEmptyState } from "./chart-states";
 
 interface MultiYearIncomeVsExpensesReportProps {
   filters: {
@@ -60,14 +62,6 @@ const MultiYearIncomeVsExpensesReport: React.FC<MultiYearIncomeVsExpensesReportP
   const dateRangeText = (() => {
     return formatDateRangeLabel(filters.startDate, filters.endDate, userLocale, dateFormat, t('All Time'));
   })();
-
-  // Convert filter arrays to database format
-  const getDbFilterArray = (filterArray: string[]) => {
-    if (filterArray.includes('all') || filterArray.length === 0) {
-      return null;
-    }
-    return filterArray.map(id => parseInt(id, 10));
-  };
 
   // Fetch multi-year income vs expenses data
   const queryParams = {
@@ -238,13 +232,9 @@ const MultiYearIncomeVsExpensesReport: React.FC<MultiYearIncomeVsExpensesReportP
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <div className="h-96 flex items-center justify-center">
-            <p>{t('Loading multi-year report data...')}</p>
-          </div>
+          <ChartLoadingState />
         ) : availableYears.length === 0 ? (
-          <div className="h-96 flex flex-col items-center justify-center text-gray-500 dark:text-gray-400">
-            <p>{t('No data available for the selected filters')}</p>
-          </div>
+          <ChartEmptyState message={t('No data available for the selected filters')} />
         ) : (
           <div className="space-y-6">
             {/* Multi-year Summary Cards */}

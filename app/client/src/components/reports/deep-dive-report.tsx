@@ -8,9 +8,10 @@ import { useServiceQuery } from "@/hooks/useServiceQuery";
 import { useFinance } from "@/contexts/finance-context";
 import { localDateString } from "@/lib/date-utils";
 import { formatCurrency } from "@/lib/currency-formatter";
-import { Spinner } from "@/components/ui/spinner";
 import { openTransactionDrilldown } from "@/utils/drilldown-utils";
 import { format, parseISO } from "date-fns";
+import { getDbFilterArray } from "@/lib/report-filters";
+import { ChartLoadingState, ChartEmptyState } from "./chart-states";
 import {
   BarChart,
   Bar,
@@ -40,11 +41,6 @@ interface DeepDiveReportProps {
   filters: Filters;
 }
 
-function getDbFilterArray(arr: string[]): number[] | null {
-  if (arr.includes("all") || arr.length === 0) return null;
-  return arr.map((id) => parseInt(id, 10));
-}
-
 function buildQueryParams(filters: Filters) {
   return {
     start_date: localDateString(filters.startDate),
@@ -63,8 +59,8 @@ const ChartSkeleton: React.FC<{ title: string }> = ({ title }) => (
     <CardHeader>
       <CardTitle className="text-base">{title}</CardTitle>
     </CardHeader>
-    <CardContent className="flex items-center justify-center h-[280px]">
-      <Spinner size="lg" />
+    <CardContent>
+      <ChartLoadingState className="h-[280px]" />
     </CardContent>
   </Card>
 );
@@ -76,8 +72,8 @@ const ChartEmpty: React.FC<{ title: string }> = ({ title }) => {
       <CardHeader>
         <CardTitle className="text-base">{title}</CardTitle>
       </CardHeader>
-      <CardContent className="flex items-center justify-center h-[280px]">
-        <p className="text-sm text-muted-foreground">{t('No data for this period')}</p>
+      <CardContent>
+        <ChartEmptyState className="h-[280px]" message={t('No data for this period')} />
       </CardContent>
     </Card>
   );

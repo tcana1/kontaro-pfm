@@ -17,8 +17,9 @@ import { useServiceQuery } from "@/hooks/useServiceQuery";
 import { useFinance } from "@/contexts/finance-context";
 import { localDateString } from "@/lib/date-utils";
 import { formatCurrency } from "@/lib/currency-formatter";
-import { Spinner } from "@/components/ui/spinner";
 import { openTransactionDrilldown } from "@/utils/drilldown-utils";
+import { getDbFilterArray } from "@/lib/report-filters";
+import { ChartLoadingState, ChartEmptyState } from "./chart-states";
 
 interface MerchantScatterReportProps {
   filters: {
@@ -126,11 +127,6 @@ const MerchantScatterReport: React.FC<MerchantScatterReportProps> = ({
     (filters.categoryIds.includes("all") || filters.categoryIds.length === 0) &&
     (filters.groupIds.includes("all") || filters.groupIds.length === 0);
 
-  const getDbFilterArray = (filterArray: string[]) => {
-    if (filterArray.includes("all") || filterArray.length === 0) return null;
-    return filterArray.map((id) => parseInt(id, 10));
-  };
-
   const queryParams = {
     start_date: localDateString(filters.startDate),
     end_date: localDateString(filters.endDate),
@@ -217,16 +213,16 @@ const MerchantScatterReport: React.FC<MerchantScatterReportProps> = ({
 
   if (isLoading) {
     return (
-      <Card className="p-4 h-[420px] flex items-center justify-center">
-        <Spinner size="lg" />
+      <Card className="p-4">
+        <ChartLoadingState className="h-[420px]" />
       </Card>
     );
   }
 
   if (!allPoints.length) {
     return (
-      <Card className="p-4 h-[420px] flex items-center justify-center">
-        <p className="text-muted-foreground">{t('No merchant data for this period')}</p>
+      <Card className="p-4">
+        <ChartEmptyState className="h-[420px]" message={t('No merchant data for this period')} />
       </Card>
     );
   }
