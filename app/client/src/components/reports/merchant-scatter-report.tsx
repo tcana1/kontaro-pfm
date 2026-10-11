@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ChartTooltip } from "@/components/ui/chart-tooltip";
 import {
   ScatterChart,
   Scatter,
@@ -105,12 +106,11 @@ const CustomTooltip = ({
   const d: ScatterPoint = payload[0]?.payload;
   if (!d) return null;
   return (
-    <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-sm p-3 text-sm">
-      <p className="font-semibold mb-1">{d.payee}</p>
+    <ChartTooltip title={d.payee} className="p-3">
       <p className="text-muted-foreground">{t('Visits:')} <span className="text-foreground font-medium">{d.visit_count}</span></p>
       <p className="text-muted-foreground">{t('Avg/visit:')} <span className="text-foreground font-medium">{formatCurrency(d.avg_per_visit, currency as any)}</span></p>
       <p className="text-muted-foreground">{t('Total:')} <span className="text-foreground font-medium">{formatCurrency(d.total_spent, currency as any)}</span></p>
-    </div>
+    </ChartTooltip>
   );
 };
 

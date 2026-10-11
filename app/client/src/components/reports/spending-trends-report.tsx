@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useDateFnsLocale } from "@/lib/date-fns-locale";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ChartTooltip } from "@/components/ui/chart-tooltip";
 import { Switch } from "@/components/ui/switch";
 import { useServiceQuery } from "@/hooks/useServiceQuery";
 import { useFinance } from "@/contexts/finance-context";
@@ -198,8 +199,7 @@ const SpendingTrendsReport: React.FC<SpendingTrendsReportProps> = ({
       const sortedPayload = [...payload].sort((a, b) => a.value - b.value);
 
       return (
-        <div className="bg-white dark:bg-gray-800 p-3 border border-gray-200 dark:border-gray-700 rounded shadow-sm">
-          <p className="font-medium mb-2">{label}</p>
+        <ChartTooltip title={label} className="p-3">
           {sortedPayload.map((entry: any, index: number) => {
             if (entry.value === 0) return null;
 
@@ -230,7 +230,7 @@ const SpendingTrendsReport: React.FC<SpendingTrendsReportProps> = ({
               <span>{formatCurrency(totalForMonth, currency)}</span>
             </div>
           </div>
-        </div>
+        </ChartTooltip>
       );
     }
     return null;

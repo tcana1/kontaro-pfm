@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ChartTooltip } from "@/components/ui/chart-tooltip";
 import { useFinance } from "@/contexts/finance-context";
 import { useAuth } from "@/contexts/auth-context";
 import { formatCurrency } from "@/lib/currency-formatter";
@@ -140,13 +141,12 @@ const SpendingBreakdownReport: React.FC<SpendingBreakdownReportProps> = ({
     if (!active || !payload?.length || !chartData) return null;
     const slice = payload[0].payload;
     return (
-      <div className="bg-white dark:bg-gray-800 p-2 border border-gray-200 dark:border-gray-700 rounded shadow-sm">
-        <p className="font-medium text-gray-900 dark:text-gray-100">{slice.name}</p>
-        <p className="text-sm text-gray-700 dark:text-gray-300">{formatCurrency(slice.value, currency)}</p>
-        <p className="text-sm text-gray-500 dark:text-gray-400">
+      <ChartTooltip title={slice.name}>
+        <p>{formatCurrency(slice.value, currency)}</p>
+        <p className="text-gray-500 dark:text-gray-400">
           {((slice.value / (chartData.total || 1)) * 100).toFixed(1)}%
         </p>
-      </div>
+      </ChartTooltip>
     );
   };
 

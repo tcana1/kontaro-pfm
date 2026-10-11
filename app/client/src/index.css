@@ -14,7 +14,7 @@
     overflow-x: hidden; /* Prevent horizontal scrolling */
   }
 
-  /* Recharts renders SVG with hard-coded light-theme defaults (#666 text, #ccc grid, white tooltip) */
+  /* Recharts renders SVG with hard-coded light-theme defaults (#666 text, #ccc grid) */
   .dark .recharts-cartesian-axis-tick-value,
   .dark .recharts-label,
   .dark .recharts-text.recharts-cartesian-axis-tick-value {
@@ -26,13 +26,6 @@
   .dark .recharts-cartesian-axis-line,
   .dark .recharts-cartesian-axis-tick-line {
     stroke: #4b5563;
-  }
-  .dark .recharts-default-tooltip {
-    background-color: #1f2937 !important;
-    border-color: #374151 !important;
-  }
-  .dark .recharts-tooltip-label {
-    color: #e5e7eb !important;
   }
   .dark .recharts-tooltip-cursor {
     fill: rgba(255, 255, 255, 0.06);

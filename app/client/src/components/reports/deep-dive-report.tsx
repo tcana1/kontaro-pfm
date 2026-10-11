@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useDateFnsLocale } from "@/lib/date-fns-locale";
 import MerchantScatterReport from "@/components/reports/merchant-scatter-report";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ChartTooltipList } from "@/components/ui/chart-tooltip";
 import { useServiceQuery } from "@/hooks/useServiceQuery";
 import { useFinance } from "@/contexts/finance-context";
 import { localDateString } from "@/lib/date-utils";
@@ -142,6 +143,7 @@ const HistogramChart: React.FC<{ filters: Filters }> = ({ filters }) => {
             <XAxis dataKey="bucket_label" tick={{ fontSize: 11 }} />
             <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
             <Tooltip
+              content={<ChartTooltipList />}
               formatter={(value: number) => [value, t('Transactions')]}
               cursor={{ fill: "rgba(59,130,246,0.1)" }}
             />
@@ -232,6 +234,7 @@ const RollingSpendChart: React.FC<{ filters: Filters }> = ({ filters }) => {
               tickFormatter={(v) => (v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v))}
             />
             <Tooltip
+              content={<ChartTooltipList />}
               labelFormatter={(d) => format(parseISO(d as string), "PP", { locale: dateLocale })}
               formatter={(v: number, name: string) => [formatCurrency(v, currency), name]}
             />
@@ -349,7 +352,7 @@ const SeasonalPatternChart: React.FC<{ filters: Filters }> = ({ filters }) => {
               tick={{ fontSize: 11 }}
               tickFormatter={(v) => (v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v))}
             />
-            <Tooltip formatter={(v: number) => [formatCurrency(v, currency), ""]} />
+            <Tooltip content={<ChartTooltipList />} formatter={(v: number) => [formatCurrency(v, currency), ""]} />
             <Legend />
             {years.map((year, i) => (
               <Line
@@ -448,7 +451,7 @@ const TicketSizeChart: React.FC<{ filters: Filters }> = ({ filters }) => {
               tick={{ fontSize: 11 }}
               tickFormatter={(v) => (v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v))}
             />
-            <Tooltip formatter={(v: number, name: string) => [formatCurrency(v, currency), name]} />
+            <Tooltip content={<ChartTooltipList />} formatter={(v: number, name: string) => [formatCurrency(v, currency), name]} />
             <Legend />
             <Area
               type="monotone"

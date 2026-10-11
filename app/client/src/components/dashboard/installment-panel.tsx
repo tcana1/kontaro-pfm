@@ -11,6 +11,7 @@ import {
 import { useServiceQuery } from '@/hooks/useServiceQuery';
 import { useFinance } from '@/contexts/finance-context';
 import { formatCurrency } from '@/lib/currency-formatter';
+import { ChartTooltip } from '@/components/ui/chart-tooltip';
 
 interface Props {
   selectedMonth: Date;
@@ -206,9 +207,9 @@ export default function InstallmentPanel({ selectedMonth }: Props) {
                       const val = payload[0]?.value as number | undefined;
                       if (val == null) return null;
                       return (
-                        <div className="text-xs bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-md px-2 py-1">
+                        <ChartTooltip className="text-xs px-2 py-1">
                           {formatCurrency(val, currency, 0)}
-                        </div>
+                        </ChartTooltip>
                       );
                     }}
                     cursor={{ fill: 'rgba(0,0,0,0.04)' }}

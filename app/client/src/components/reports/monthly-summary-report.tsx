@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ChartTooltip } from '@/components/ui/chart-tooltip';
 import { useQuery } from '@tanstack/react-query';
 import { useFinance } from '@/contexts/finance-context';
 import { formatCurrency } from '@/lib/currency-formatter';
@@ -111,18 +112,17 @@ const MonthlySummaryReport: React.FC<MonthlySummaryReportProps> = ({ filters }) 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
-        <div className="bg-white dark:bg-gray-800 p-2 border border-gray-200 dark:border-gray-700 rounded shadow-sm">
-          <p className="font-medium">{label}</p>
-          <p className="text-sm text-success">
+        <ChartTooltip title={label}>
+          <p className="text-success">
             {t('Income')}: {formatCurrency(payload[0].value, currency)}
           </p>
-          <p className="text-sm text-danger">
+          <p className="text-danger">
             {t('Expenses')}: {formatCurrency(payload[1].value, currency)}
           </p>
-          <p className="text-sm border-t border-gray-200 dark:border-gray-700 mt-1 pt-1">
+          <p className="border-t border-gray-200 dark:border-gray-700 mt-1 pt-1">
             {t('Net')}: {formatCurrency(payload[2].value, currency)}
           </p>
-        </div>
+        </ChartTooltip>
       );
     }
     return null;

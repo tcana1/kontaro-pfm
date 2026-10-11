@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ChartTooltip } from '@/components/ui/chart-tooltip';
 import { useQuery } from '@tanstack/react-query';
 import { useFinance } from '@/contexts/finance-context';
 import { formatCurrency } from '@/lib/currency-formatter';
@@ -92,13 +93,12 @@ const ExpenseByCategoryReport: React.FC<ExpenseByCategoryReportProps> = ({ filte
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       return (
-        <div className="bg-white dark:bg-gray-800 p-2 border border-gray-200 dark:border-gray-700 rounded shadow-sm">
-          <p className="font-medium">{data.name}</p>
-          <p className="text-sm">{formatCurrency(data.value, currency)}</p>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+        <ChartTooltip title={data.name}>
+          <p>{formatCurrency(data.value, currency)}</p>
+          <p className="text-gray-500 dark:text-gray-400">
             {((data.value / totalAmount) * 100).toFixed(1)}%
           </p>
-        </div>
+        </ChartTooltip>
       );
     }
     return null;
