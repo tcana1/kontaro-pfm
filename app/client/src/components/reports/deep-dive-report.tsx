@@ -241,7 +241,7 @@ const RollingSpendChart: React.FC<{ filters: Filters }> = ({ filters }) => {
             <Area
               type="monotone"
               dataKey="rolling"
-              name="30-day rolling"
+              name={t("30-day rolling")}
               fill="#3b82f6"
               fillOpacity={0.25}
               stroke="#3b82f6"
@@ -252,7 +252,7 @@ const RollingSpendChart: React.FC<{ filters: Filters }> = ({ filters }) => {
               y={avgLine}
               stroke="#ef4444"
               strokeDasharray="6 3"
-              label={{ value: "Avg", position: "insideTopRight", fontSize: 10, fill: "#ef4444" }}
+              label={{ value: t("Avg"), position: "insideTopRight", fontSize: 10, fill: "#ef4444" }}
             />
           </ComposedChart>
         </ResponsiveContainer>
@@ -263,13 +263,13 @@ const RollingSpendChart: React.FC<{ filters: Filters }> = ({ filters }) => {
 
 // ── Chart 3: Multi-Year Seasonal Pattern ──────────────────────────────────────
 
-const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const YEAR_COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899"];
 
 type SeasonalRow = { year: number; month: number; total: number };
 
 const SeasonalPatternChart: React.FC<{ filters: Filters }> = ({ filters }) => {
   const { t } = useTranslation();
+  const dateLocale = useDateFnsLocale();
   const { currency } = useFinance();
   const { data, isLoading } = useServiceQuery("get_seasonal_pattern", {
     rawQuery: true,
@@ -280,6 +280,7 @@ const SeasonalPatternChart: React.FC<{ filters: Filters }> = ({ filters }) => {
     if (!Array.isArray(data) || data.length === 0)
       return { chartData: [], years: [] as number[], highestMonth: null as null | { label: string; year: number; value: number }, consistentMonth: null as null | { label: string } };
 
+    const monthLabels = Array.from({ length: 12 }, (_, i) => format(new Date(2000, i, 1), "MMM", { locale: dateLocale }));
     const rows = data as SeasonalRow[];
     const yearSet = [...new Set(rows.map((r) => r.year))].sort();
 
@@ -287,7 +288,7 @@ const SeasonalPatternChart: React.FC<{ filters: Filters }> = ({ filters }) => {
     for (let m = 1; m <= 12; m++) pivot.set(m, new Map());
     rows.forEach(({ year, month, total }) => pivot.get(month)!.set(year, Number(total)));
 
-    const chartData = MONTH_LABELS.map((label, i) => {
+    const chartData = monthLabels.map((label, i) => {
       const m = i + 1;
       const entry: Record<string, any> = { month: label };
       yearSet.forEach((y) => {
@@ -301,7 +302,7 @@ const SeasonalPatternChart: React.FC<{ filters: Filters }> = ({ filters }) => {
     rows.forEach(({ year, month, total }) => {
       const v = Number(total);
       if (!highestMonth || v > highestMonth.value) {
-        highestMonth = { label: MONTH_LABELS[month - 1], year, value: v };
+        highestMonth = { label: monthLabels[month - 1], year, value: v };
       }
     });
 
@@ -316,13 +317,13 @@ const SeasonalPatternChart: React.FC<{ filters: Filters }> = ({ filters }) => {
         const stddev = Math.sqrt(vals.reduce((s, v) => s + (v - avg) ** 2, 0) / vals.length);
         if (stddev < minStddev) {
           minStddev = stddev;
-          consistentMonth = { label: MONTH_LABELS[m - 1] };
+          consistentMonth = { label: monthLabels[m - 1] };
         }
       }
     }
 
     return { chartData, years: yearSet, highestMonth, consistentMonth };
-  }, [data]);
+  }, [data, dateLocale]);
 
   if (isLoading) return <ChartSkeleton title={t('Multi-Year Seasonal Pattern')} />;
   if (chartData.length === 0) return <ChartEmpty title={t('Multi-Year Seasonal Pattern')} />;
@@ -456,7 +457,7 @@ const TicketSizeChart: React.FC<{ filters: Filters }> = ({ filters }) => {
             <Area
               type="monotone"
               dataKey="mean_ticket"
-              name="Mean"
+              name={t("Mean")}
               fill="#3b82f6"
               fillOpacity={0.25}
               stroke="#3b82f6"
@@ -466,7 +467,7 @@ const TicketSizeChart: React.FC<{ filters: Filters }> = ({ filters }) => {
             <Line
               type="monotone"
               dataKey="median_ticket"
-              name="Median"
+              name={t("Median")}
               stroke="#10b981"
               strokeWidth={2}
               dot={{ r: 3 }}
