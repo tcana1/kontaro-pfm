@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartTooltipList } from "@/components/ui/chart-tooltip";
 import { useServiceQuery } from "@/hooks/useServiceQuery";
 import { useFinance } from "@/contexts/finance-context";
-import { localDateString } from "@/lib/date-utils";
+import { localDateString, isAllTimeStart, daysBetween } from "@/lib/date-utils";
 import { formatCurrency } from "@/lib/currency-formatter";
 import { openTransactionDrilldown } from "@/utils/drilldown-utils";
 import { format, parseISO } from "date-fns";
@@ -156,16 +156,6 @@ const HistogramChart: React.FC<{ filters: Filters }> = ({ filters }) => {
 
 type DailySpendRow = { date: string; daily_total: number };
 
-function generateDailyRange(start: Date, end: Date): string[] {
-  const dates: string[] = [];
-  const current = new Date(start);
-  while (current <= end) {
-    dates.push(format(current, "yyyy-MM-dd"));
-    current.setDate(current.getDate() + 1);
-  }
-  return dates;
-}
-
 const RollingSpendChart: React.FC<{ filters: Filters }> = ({ filters }) => {
   const { t } = useTranslation();
   const dateLocale = useDateFnsLocale();
@@ -180,7 +170,10 @@ const RollingSpendChart: React.FC<{ filters: Filters }> = ({ filters }) => {
       return { chartData: [], avgLine: 0, tooShort: false };
 
     const rows = data as DailySpendRow[];
-    const allDays = generateDailyRange(filters.startDate, filters.endDate);
+    // "All Time" starts in 1900: begin at the first day with spending instead of plotting ~46k empty days.
+    const firstSpendDay = rows.reduce((min, r) => (r.date < min ? r.date : min), rows[0].date);
+    const startDay = isAllTimeStart(filters.startDate) ? firstSpendDay : localDateString(filters.startDate);
+    const allDays = daysBetween(startDay, localDateString(filters.endDate));
     const tooShort = allDays.length < 30;
 
     const rawMap = new Map(rows.map((r) => [r.date, Number(r.daily_total)]));
