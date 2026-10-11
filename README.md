@@ -8,7 +8,7 @@ Kontaro is an open-source, self-hosted personal finance manager built for people
 [![Importer CI](https://github.com/tcana1/kontaro-pfm/actions/workflows/importer-ci.yml/badge.svg)](https://github.com/tcana1/kontaro-pfm/actions/workflows/importer-ci.yml)
 [![MCP CI](https://github.com/tcana1/kontaro-pfm/actions/workflows/mcp-ci.yml/badge.svg)](https://github.com/tcana1/kontaro-pfm/actions/workflows/mcp-ci.yml)
 
-![Dashboard](docs/dashboard_en.png)
+<p align="center"><img src="docs/dashboard_en.png" alt="Dashboard, desktop" width="75.1%"><img src="docs/dashboard-mobile-dark.png" alt="Dashboard, mobile, dark mode" width="24.8%"></p>
 
 ---
 
@@ -23,7 +23,7 @@ Kontaro is an open-source, self-hosted personal finance manager built for people
 - **Self-hosted** — runs as a Docker Compose stack. Choose between a fully local Postgres setup or Supabase Cloud for the database.
 - **Internationalised** — English and Brazilian Portuguese out of the box; add any locale in minutes.
 
-![Transactions](docs/transactions.png)
+<p align="center"><img src="docs/transactions.png" alt="Transactions, desktop" width="75.1%"><img src="docs/transactions-mobile-dark.png" alt="Transactions, mobile, dark mode" width="24.8%"></p>
 
 [More screenshots →](docs/screenshots.md)
 
