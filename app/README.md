@@ -25,7 +25,7 @@ overview, see the [root README](../README.md).
 
 | Layer | Technology |
 |---|---|
-| UI | React 18, TypeScript, Tailwind CSS, shadcn/ui, framer-motion, recharts / chart.js |
+| UI | React 18, TypeScript, Tailwind CSS, shadcn/ui, framer-motion, recharts |
 | Routing | wouter |
 | State / data | TanStack Query, React Context, react-hook-form + zod |
 | Backend client | `@supabase/supabase-js` (typed via generated `database.types.ts`) |
