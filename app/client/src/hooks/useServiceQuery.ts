@@ -16,11 +16,16 @@ interface QueryOptions {
   };
 }
 
+export function buildServiceQueryKey(key: string | (string | number)[], options: QueryOptions = {}) {
+  if (!Array.isArray(key)) return [key, options];
+  return options.queryParams ? [...key, options.queryParams] : key;
+}
+
 export function useServiceQuery<T = any>(key: string | (string | number)[], options: QueryOptions = {}) {
   const { rawQuery, queryParams, ...restOptions } = options;
 
   return useQuery<T>({
-    queryKey: Array.isArray(key) ? key : [key, options],
+    queryKey: buildServiceQueryKey(key, options),
     queryFn: async () => {
       if (rawQuery) {
         const data = await supabaseService.rpc(Array.isArray(key) ? key[0] as string : key, queryParams ?? {});
