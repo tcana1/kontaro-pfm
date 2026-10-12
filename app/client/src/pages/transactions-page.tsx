@@ -656,7 +656,7 @@ const TransactionsPageContent: React.FC<TransactionsPageContentProps> = ({ accou
             </AlertDialogTitle>
             <AlertDialogDescription>
               {isBulkDeleteConfirmation ? (
-                t('Are you sure you want to delete {{count}} transactions? This action cannot be undone.', { count: selectedTransactions.length })
+                t('Are you sure you want to delete {{count}} transactions?', { count: selectedTransactions.length })
               ) : reconciliationInfo?.is_adjustment ? (
                 <div className="space-y-2">
                   <p>
@@ -682,7 +682,7 @@ const TransactionsPageContent: React.FC<TransactionsPageContentProps> = ({ accou
                   <p>{t('Are you sure you want to delete this reconciled transaction?')}</p>
                 </div>
               ) : (
-                t('Are you sure you want to delete this transaction? This action cannot be undone.')
+                t('Are you sure you want to delete this transaction?')
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>

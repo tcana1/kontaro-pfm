@@ -16,6 +16,29 @@ const pickRestoreOnlyFields = (tx: Record<string, any>) => {
   return picked;
 };
 
+// Re-creating a transfer/payment leg re-creates the whole pair (create_linked_transactions),
+// so when both legs of a pair are in the list only one of them may be restored. Pairs are
+// matched by their mirrored fields (UI objects carry no transfer_link_id); each transaction
+// joins at most one pair and the lower id (primary leg) is the one kept.
+const dropMirrorLegs = (transactions: Transaction[]): Transaction[] => {
+  const isLinked = (t: any) => (t.type === 'transfer' || t.type === 'payment') && t.to_account_id != null;
+  const sorted = [...transactions].sort((a, b) => a.id - b.id);
+  const mirrors = new Set<number>();
+  for (const [i, primary] of sorted.entries()) {
+    if (mirrors.has(primary.id) || !isLinked(primary)) continue;
+    const mirror = sorted.slice(i + 1).find((c: any) =>
+      !mirrors.has(c.id) && isLinked(c) &&
+      c.type === (primary as any).type &&
+      c.account_id === (primary as any).to_account_id &&
+      c.to_account_id === primary.account_id &&
+      c.payment_date === primary.payment_date &&
+      Number(c.amount) === -Number(primary.amount)
+    );
+    if (mirror) mirrors.add(mirror.id);
+  }
+  return transactions.filter(t => !mirrors.has(t.id));
+};
+
 /**
  * Command to delete a transaction.
  * - execute(): Deletes the transaction from the database.
@@ -372,35 +395,50 @@ export class BulkDeleteTransactionCommand implements ICommand {
 
   private async restoreTransactionsInDatabase(): Promise<void> {
     const newIds: number[] = [];
-    for (const transaction of this.transactions) {
-      const { id, splits, ...restorableData } = transaction;
-      const sanitizedData = sanitizeTransactionForUpdate(restorableData);
-      Object.assign(sanitizedData, pickRestoreOnlyFields(restorableData));
+    try {
+      for (const transaction of dropMirrorLegs(this.transactions)) {
+        const { id, splits, ...restorableData } = transaction;
+        const sanitizedData = sanitizeTransactionForUpdate(restorableData);
+        Object.assign(sanitizedData, pickRestoreOnlyFields(restorableData));
 
-      // Handle splits restoration
-      if (splits && splits.length >= 2) {
-        // Multi-split transaction: pass all splits so createUniqueTransaction recreates them all
-        sanitizedData.isSplitTransaction = true;
-        sanitizedData.splits = splits.map((s: any) => ({
-          categoryId: s.categoryId ?? s.category_id,
-          amount: s.amount,
-          notes: s.notes ?? s.split_observation ?? '',
-        }));
-      } else if (splits && splits.length === 1) {
-        const firstSplit = splits[0];
-        if (firstSplit.category_id !== undefined) {
-          sanitizedData.category_id = firstSplit.category_id;
+        // Handle splits restoration
+        if (splits && splits.length >= 2) {
+          // Multi-split transaction: pass all splits so createUniqueTransaction recreates them all
+          sanitizedData.isSplitTransaction = true;
+          sanitizedData.splits = splits.map((s: any) => ({
+            categoryId: s.categoryId ?? s.category_id,
+            amount: s.amount,
+            notes: s.notes ?? s.split_observation ?? '',
+          }));
+        } else if (splits && splits.length === 1) {
+          const firstSplit = splits[0];
+          if (firstSplit.category_id !== undefined) {
+            sanitizedData.category_id = firstSplit.category_id;
+          }
+          if (firstSplit.amount !== undefined) {
+            sanitizedData.amount = firstSplit.amount;
+          }
+          if (firstSplit.observation !== undefined) {
+            sanitizedData.notes = firstSplit.observation ?? undefined;
+          }
         }
-        if (firstSplit.amount !== undefined) {
-          sanitizedData.amount = firstSplit.amount;
-        }
-        if (firstSplit.observation !== undefined) {
-          sanitizedData.notes = firstSplit.observation ?? undefined;
+
+        const restored = await supabaseService.createUniqueTransaction(sanitizedData);
+        if (restored?.id) newIds.push(restored.id);
+      }
+    } catch (error) {
+      // Not atomic: delete what was already re-created so the undo can be retried
+      // without duplicating rows. If that fails too, keep the ids so a redo still
+      // deletes them.
+      if (newIds.length > 0) {
+        try {
+          await supabaseService.deleteMany('transactions', newIds);
+        } catch (rollbackError) {
+          console.error('BulkDeleteTransactionCommand.unexecute() - Rollback of partially restored transactions failed:', rollbackError);
+          this.restoredIds = newIds;
         }
       }
-
-      const restored = await supabaseService.createUniqueTransaction(sanitizedData);
-      if (restored?.id) newIds.push(restored.id);
+      throw error;
     }
     this.restoredIds = newIds;
   }

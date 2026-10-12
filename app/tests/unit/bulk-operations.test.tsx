@@ -121,6 +121,9 @@ describe('Bulk Operations Integration Tests', () => {
     queryClient.invalidateQueries = mockInvalidateQueries;
 
     // Setup service mocks with successful responses
+    // clearAllMocks keeps unconsumed mockXOnce queues, which would leak between tests
+    vi.mocked(supabaseService.deleteMany).mockReset();
+    vi.mocked(supabaseService.createUniqueTransaction).mockReset();
     vi.mocked(supabaseService.deleteMany).mockResolvedValue(true);
     vi.mocked(supabaseService.createUniqueTransaction).mockImplementation((data) => 
       Promise.resolve({ id: Math.floor(Math.random() * 1000) + 2000, ...data })
@@ -373,6 +376,71 @@ describe('Bulk Operations Integration Tests', () => {
       expect(supabaseService.createUniqueTransaction).toHaveBeenNthCalledWith(2, expected1Single);
     });
 
+    it('should roll back already-restored transactions when undo fails midway', async () => {
+      const { result } = renderHook(() => useHistory());
+      const command = new BulkDeleteTransactionCommand(sampleTransactions, queryClient);
+
+      await act(async () => {
+        await result.current.execute(command);
+      });
+      vi.mocked(supabaseService.deleteMany).mockClear();
+
+      vi.mocked(supabaseService.createUniqueTransaction)
+        .mockResolvedValueOnce({ id: 2001 })
+        .mockResolvedValueOnce({ id: 2002 })
+        .mockRejectedValueOnce(new Error('Constraint violation'));
+
+      await act(async () => {
+        await expect(result.current.undo()).rejects.toThrow('Constraint violation');
+      });
+
+      expect(supabaseService.deleteMany).toHaveBeenCalledTimes(1);
+      expect(supabaseService.deleteMany).toHaveBeenCalledWith('transactions', [2001, 2002]);
+      // Still undoable, and a redo has nothing stale to delete
+      expect(result.current.canUndo).toBe(true);
+      expect(command.getAffectedIds()).toEqual([1001, 1002, 1003]);
+    });
+
+    it('should keep the partially restored ids when the rollback fails too', async () => {
+      const { result } = renderHook(() => useHistory());
+      const command = new BulkDeleteTransactionCommand(sampleTransactions, queryClient);
+
+      await act(async () => {
+        await result.current.execute(command);
+      });
+
+      vi.mocked(supabaseService.createUniqueTransaction)
+        .mockResolvedValueOnce({ id: 2001 })
+        .mockRejectedValueOnce(new Error('Constraint violation'));
+      vi.mocked(supabaseService.deleteMany).mockRejectedValueOnce(new Error('rollback failed'));
+      const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      await act(async () => {
+        await expect(result.current.undo()).rejects.toThrow('Constraint violation');
+      });
+      consoleError.mockRestore();
+
+      expect(command.getAffectedIds()).toEqual([1001, 1002, 1003, 2001]);
+    });
+
+    it('should not roll back anything when the first restore fails', async () => {
+      const { result } = renderHook(() => useHistory());
+      const command = new BulkDeleteTransactionCommand(sampleTransactions, queryClient);
+
+      await act(async () => {
+        await result.current.execute(command);
+      });
+      vi.mocked(supabaseService.deleteMany).mockClear();
+
+      vi.mocked(supabaseService.createUniqueTransaction).mockRejectedValueOnce(new Error('boom'));
+
+      await act(async () => {
+        await expect(result.current.undo()).rejects.toThrow('boom');
+      });
+
+      expect(supabaseService.deleteMany).not.toHaveBeenCalled();
+    });
+
     it('should handle network timeout during bulk operations', async () => {
       const { result } = renderHook(() => useHistory());
       const command = new BulkDeleteTransactionCommand(sampleTransactions, queryClient);
@@ -618,6 +686,100 @@ describe('Bulk Operations Integration Tests', () => {
       expect(supabaseService.createUniqueTransaction).toHaveBeenNthCalledWith(1, expected0);
       expect(supabaseService.createUniqueTransaction).toHaveBeenNthCalledWith(2, expected1);
       expect(supabaseService.createUniqueTransaction).toHaveBeenNthCalledWith(3, expected2);
+    });
+
+    describe('linked pairs on undo', () => {
+      const leg = (id: number, account_id: number, to_account_id: number, amount: number, extra: Record<string, any> = {}) => ({
+        id,
+        payee: amount < 0 ? 'Transfer to Savings' : 'Transfer from Checking',
+        amount,
+        payment_date: '2023-05-01',
+        account_id,
+        to_account_id,
+        type: 'transfer',
+        category_id: 1,
+        user_id: 1,
+        splits: [],
+        ...extra,
+      });
+
+      const undoWith = async (transactions: any[]) => {
+        const { result } = renderHook(() => useHistory());
+        const command = new BulkDeleteTransactionCommand(transactions, queryClient);
+        await act(async () => { await result.current.execute(command); });
+        await act(async () => { await result.current.undo(); });
+        return { result, command };
+      };
+
+      const restoredIds = () =>
+        vi.mocked(supabaseService.createUniqueTransaction).mock.calls.map(([d]: any) => d.account_id);
+
+      it('restores a pair once when both legs are selected', async () => {
+        await undoWith([leg(1, 10, 20, -50), leg(2, 20, 10, 50)]);
+
+        expect(supabaseService.createUniqueTransaction).toHaveBeenCalledTimes(1);
+        // The primary (lower id) leg is the one re-created
+        expect(restoredIds()).toEqual([10]);
+      });
+
+      it('keeps the primary leg even when the mirror comes first in the selection', async () => {
+        await undoWith([leg(2, 20, 10, 50), leg(1, 10, 20, -50)]);
+
+        expect(supabaseService.createUniqueTransaction).toHaveBeenCalledTimes(1);
+        expect(restoredIds()).toEqual([10]);
+      });
+
+      it('restores each of several pairs once', async () => {
+        await undoWith([
+          leg(1, 10, 20, -50), leg(2, 20, 10, 50),
+          leg(3, 10, 20, -60, { payment_date: '2023-05-02' }), leg(4, 20, 10, 60, { payment_date: '2023-05-02' }),
+        ]);
+
+        expect(supabaseService.createUniqueTransaction).toHaveBeenCalledTimes(2);
+      });
+
+      it('matches identical pairs one-to-one', async () => {
+        await undoWith([
+          leg(1, 10, 20, -50), leg(2, 10, 20, -50),
+          leg(3, 20, 10, 50), leg(4, 20, 10, 50),
+        ]);
+
+        expect(supabaseService.createUniqueTransaction).toHaveBeenCalledTimes(2);
+      });
+
+      it('still restores a lone leg whose mirror is not selected', async () => {
+        await undoWith([leg(2, 20, 10, 50)]);
+
+        expect(supabaseService.createUniqueTransaction).toHaveBeenCalledTimes(1);
+        expect(restoredIds()).toEqual([20]);
+      });
+
+      it('does not pair legs that only look alike', async () => {
+        await undoWith([
+          leg(1, 10, 20, -50),
+          leg(2, 20, 10, 50, { payment_date: '2023-05-09' }),
+          leg(3, 20, 10, 51),
+          leg(4, 20, 10, 50, { type: 'payment' }),
+        ]);
+
+        expect(supabaseService.createUniqueTransaction).toHaveBeenCalledTimes(4);
+      });
+
+      it('restores normal transactions alongside a collapsed pair', async () => {
+        await undoWith([sampleTransactions[0], leg(5, 10, 20, -50), leg(6, 20, 10, 50), sampleTransactions[1]]);
+
+        expect(supabaseService.createUniqueTransaction).toHaveBeenCalledTimes(3);
+      });
+
+      it('redo deletes only the restored primary id (the RPC removes the partner)', async () => {
+        vi.mocked(supabaseService.createUniqueTransaction).mockResolvedValueOnce({ id: 3001 });
+        const { result } = await undoWith([leg(1, 10, 20, -50), leg(2, 20, 10, 50)]);
+        vi.mocked(supabaseService.deleteMany).mockClear();
+
+        await act(async () => { await result.current.redo(); });
+
+        expect(supabaseService.deleteMany).toHaveBeenCalledWith('transactions', [3001]);
+      });
     });
 
     it('should ensure bulk operation service methods exist to prevent runtime errors', async () => {
