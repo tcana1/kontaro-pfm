@@ -141,4 +141,65 @@ describe('converting a regular transaction to a Payment/Transfer', () => {
       supabaseService.update('transactions', 7, { type: 'payment', to_account_id: 69 }),
     ).rejects.toThrow('Duplicate transaction found.');
   });
+
+  it('undo restores the original through a single RPC, using the snapshot the conversion returned', async () => {
+    const snapshot = {
+      primary: { id: 7 },
+      linked: { id: 101 },
+      original: { id: 7, unique_hash: 'h', statement_identifier: 'pluggy:5835821e' },
+      original_splits: [{ category_id: -4, amount: -29459.76, observation: '' }],
+    };
+    mocks.rpc.mockResolvedValueOnce({ data: snapshot, error: null });
+
+    const command = new UpdateTransactionCommand(regularTx as any, formPayload as any, new QueryClient());
+    await command.execute();
+    await command.waitForDatabase();
+    mocks.rpc.mockResolvedValueOnce({ data: { original: { id: 7 } }, error: null });
+
+    await command.unexecute();
+
+    expect(mocks.rpc).toHaveBeenCalledTimes(2);
+    expect(mocks.rpc).toHaveBeenLastCalledWith('undo_convert_transaction_to_linked', {
+      p_transaction_id: 7,
+      p_original: snapshot.original,
+      p_original_splits: snapshot.original_splits,
+    });
+    // No client-side delete/create: that path used to drop unique_hash and fail half-way.
+    expect(mocks.from).not.toHaveBeenCalled();
+  });
+});
+
+describe('editing an existing Payment/Transfer pair', () => {
+  const pairLeg = { ...regularTx, type: 'payment', to_account_id: 69 };
+
+  it('sends the whole edit to update_linked_transactions in one call, including a type change', async () => {
+    mocks.currentRow = pairLeg;
+    mocks.rpc.mockResolvedValue({ data: { primary: { id: 7 }, linked: { id: 8 } }, error: null });
+
+    const result = await supabaseService.update('transactions', 7, {
+      type: 'transfer',
+      account_id: 71,
+      to_account_id: 69,
+      amount: -50.55,
+      notes: 'n',
+      payee: 'ignored',
+    });
+
+    expect(result).toEqual({ id: 7 });
+    expect(mocks.rpc).toHaveBeenCalledTimes(1);
+    expect(mocks.rpc).toHaveBeenCalledWith('update_linked_transactions', {
+      p_transaction_id: 7,
+      p_updates: expect.objectContaining({ type: 'transfer', account_id: 71, to_account_id: 69, amount: -50.55, notes: 'n' }),
+    });
+    expect(mocks.rpc.mock.calls[0][1].p_updates).not.toHaveProperty('payee');
+  });
+
+  it('propagates update errors', async () => {
+    mocks.currentRow = pairLeg;
+    mocks.rpc.mockResolvedValue({ data: null, error: new Error('Cannot edit a transfer/payment that has multiple splits') });
+
+    await expect(
+      supabaseService.update('transactions', 7, { type: 'payment', to_account_id: 69 }),
+    ).rejects.toThrow('multiple splits');
+  });
 });

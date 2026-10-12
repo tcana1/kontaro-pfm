@@ -4,6 +4,7 @@ import { QueryClient } from "@tanstack/react-query";
 import { sanitizeTransactionForUpdate, sanitizeSplitForUpdate } from '@/utils/transaction-utils';
 import { Transaction } from "@shared/schema";
 import { CacheUtils } from "@/lib/cacheUtils";
+import type { ConvertedLinkedPair } from "@/services/supabase/linked-transactions";
 
 // Fields that sanitizeTransactionForUpdate drops (unsafe for plain updates) but that
 // must survive a delete→undo round trip.
@@ -449,7 +450,7 @@ export class UpdateTransactionCommand implements ICommand {
   
   // For conversion tracking (undo support)
   private isConversion = false;
-  private createdTransactionIds: number[] = [];
+  private convertedPair?: ConvertedLinkedPair;
   private newTransactionResult?: any;
 
   constructor(originalTransaction: Transaction, newTransactionData: Partial<Transaction>, queryClient: QueryClient) {
@@ -459,7 +460,8 @@ export class UpdateTransactionCommand implements ICommand {
   }
 
   public getAffectedIds(): number[] {
-    return [this.originalTransaction.id, ...this.createdTransactionIds];
+    const created = this.convertedPair ? [this.convertedPair.primary.id, this.convertedPair.linked.id] : [];
+    return [this.originalTransaction.id, ...created];
   }
 
   public async execute(): Promise<void> {
@@ -518,13 +520,13 @@ export class UpdateTransactionCommand implements ICommand {
   private async executeConversionToLinked(): Promise<void> {
     // For undo purposes, track what we're doing
     this.isConversion = true;
-    this.createdTransactionIds = [];
+    this.convertedPair = undefined;
 
     // 1. Update cache immediately (optimistic UI feedback)
     this.updateTransactionInCache(this.originalTransaction.id, this.newTransactionData);
 
     // 2. Execute the atomic conversion in background
-    this.databasePromise = this.performDeleteAndCreate()
+    this.databasePromise = this.performConversion()
       .then(async (newTransactionData) => {
         // Success - invalidate cache
         await CacheUtils.invalidateTransactionRelated(this.queryClient);
@@ -534,7 +536,7 @@ export class UpdateTransactionCommand implements ICommand {
       })
       .catch(async (error) => {
         // Failure - revert cache. The RPC is atomic (single DB transaction), so a
-        // failure here means nothing was created — no created-transaction cleanup needed.
+        // failure here means nothing changed — no cleanup needed.
         this.updateTransactionInCache(this.originalTransaction.id, this.originalTransaction);
         throw error;
       });
@@ -543,7 +545,7 @@ export class UpdateTransactionCommand implements ICommand {
   // Convert the original transaction into a linked pair in one atomic round trip
   // (previously: a dedupe check + 2 account-name fetches + 2 inserts + 1 delete,
   // each a separate request with no atomicity across them).
-  private async performDeleteAndCreate(): Promise<any> {
+  private async performConversion(): Promise<any> {
     const incoming = sanitizeTransactionForUpdate(this.newTransactionData);
     const updates = {
       account_id: incoming.account_id,
@@ -558,9 +560,8 @@ export class UpdateTransactionCommand implements ICommand {
 
     const result = await supabaseService.convertTransactionToLinked(this.originalTransaction.id, updates);
 
-    // Track both legs of the pair for undoConversion()'s cleanup
-    if (result?.primary?.id) this.createdTransactionIds.push(result.primary.id);
-    if (result?.linked?.id) this.createdTransactionIds.push(result.linked.id);
+    // Keep the whole result: it carries the snapshot undoConversion() restores from.
+    this.convertedPair = result;
 
     return result.primary;
   }
@@ -607,15 +608,15 @@ export class UpdateTransactionCommand implements ICommand {
     }
   }
 
-  // Undo conversion by deleting created transactions and recreating original
+  // Undo conversion atomically: one RPC deletes the mirror leg and resets the
+  // original row and its splits from the snapshot the conversion returned.
   private async undoConversion(): Promise<void> {
     // 1. Revert cache immediately
     this.updateTransactionInCache(this.originalTransaction.id, this.originalTransaction);
 
     // The command lands on the undo stack as soon as execute() returns, before the
-    // background conversion settles. Wait for it here: the RPC is atomic, so if it
-    // failed nothing was created and the original was never deleted — recreating it
-    // would collide on the primary key. Nothing to undo in that case.
+    // background conversion settles. Wait for it here: if it failed nothing was
+    // converted (the RPC is atomic), so there is nothing to undo.
     try {
       await this.waitForDatabase();
     } catch {
@@ -624,28 +625,12 @@ export class UpdateTransactionCommand implements ICommand {
       return;
     }
 
+    if (!this.convertedPair) return;
+
     try {
-      // 2. Delete the created linked transactions
-      if (this.createdTransactionIds.length > 0) {
-        await Promise.all(
-          this.createdTransactionIds.map(id => supabaseService.delete('transactions', id))
-        );
-      }
-      
-      // 3. Recreate the original transaction
-      const originalData = {
-        ...this.originalTransaction,
-        id: this.originalTransaction.id // Explicitly set the ID to recreate with same ID
-      };
-      
-      await supabaseService.create('transactions', originalData);
-      
-      // 4. Invalidate cache
+      await supabaseService.undoConvertTransactionToLinked(this.convertedPair);
+    } finally {
       await CacheUtils.invalidateTransactionRelated(this.queryClient);
-      
-    } catch (error) {
-      // Even if undo fails, keep the cache consistent
-      throw error;
     }
   }
 

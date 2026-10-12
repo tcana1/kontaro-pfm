@@ -43,6 +43,7 @@ export const supabaseService = {
   deleteLinkedTransactions: linked.deleteLinkedTransactions,
   deletingTransactionIds: linked.deletingTransactionIds,
   convertTransactionToLinked: linked.convertTransactionToLinked,
+  undoConvertTransactionToLinked: linked.undoConvertTransactionToLinked,
 
   // Accounts
   getAccounts: accounts.getAccounts,

@@ -52,8 +52,8 @@ SELECT is(
 
 SELECT is(
   (SELECT count(*)::int FROM transactions WHERE id IN (9101, 9102, 9103)),
-  0,
-  'originals are deleted'
+  3,
+  'originals are converted in place, not deleted'
 );
 
 -- Same lookup the Pluggy sync uses (get_existing_statement_identifiers) to skip already-imported rows.

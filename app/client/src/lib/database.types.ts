@@ -1155,6 +1155,14 @@ export type Database = {
         Args: { p_transaction_id: number; p_updates: Json }
         Returns: Json
       }
+      undo_convert_transaction_to_linked: {
+        Args: { p_transaction_id: number; p_original: Json; p_original_splits: Json }
+        Returns: Json
+      }
+      update_linked_transactions: {
+        Args: { p_transaction_id: number; p_updates: Json }
+        Returns: Json
+      }
       count_filtered_transactions: {
         Args: {
           p_accounts?: number[]
