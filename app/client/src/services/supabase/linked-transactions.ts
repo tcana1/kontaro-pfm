@@ -174,7 +174,12 @@ export async function updateLinkedTransactions(transactionId: number, updates: R
 
 export const deletingTransactionIds = new Set<number>();
 
-export async function deleteLinkedTransactions(transactionId: number): Promise<boolean> {
+// `deletedIds`, when given, collects every id removed (primary and partner) so a
+// bulk caller can skip partners that were already deleted with their pair.
+export async function deleteLinkedTransactions(
+  transactionId: number,
+  deletedIds?: Set<number>,
+): Promise<boolean> {
   // Prevent infinite recursion by tracking which transactions we're already deleting
   if (deletingTransactionIds.has(transactionId)) {
     return true;
@@ -191,16 +196,24 @@ export async function deleteLinkedTransactions(transactionId: number): Promise<b
       .from('transactions')
       .select('id, account_id, to_account_id, type, payment_date, amount, transfer_link_id')
       .eq('id', transactionId)
-      .single();
+      .maybeSingle();
 
     if (error) {
       console.error(`❌ DELETE LINKED: Error fetching transaction ${transactionId}:`, error);
       throw error;
     }
 
+    // Already gone (e.g. deleted as the partner of another leg) — nothing to do.
+    if (!currentTransaction) {
+      deletedIds?.add(transactionId);
+      return true;
+    }
+
     if (!currentTransaction.to_account_id ||
         (currentTransaction.type !== 'transfer' && currentTransaction.type !== 'payment')) {
-      return deleteRow('transactions', transactionId);
+      await deleteRow('transactions', transactionId);
+      deletedIds?.add(transactionId);
+      return true;
     }
 
     // Find the linked transaction — prefer deterministic link UUID, fall back to heuristic
@@ -211,12 +224,15 @@ export async function deleteLinkedTransactions(transactionId: number): Promise<b
     if (linkedTransactionId !== null) {
       deletingTransactionIds.add(linkedTransactionId);
       await deleteRow('transactions', linkedTransactionId);
+      deletedIds?.add(linkedTransactionId);
     } else {
       console.warn(`⚠️  DELETE LINKED: No linked transaction found for ${transactionId}, may be orphaned`);
     }
 
     // Delete the primary transaction
-    return deleteRow('transactions', transactionId);
+    await deleteRow('transactions', transactionId);
+    deletedIds?.add(transactionId);
+    return true;
   } finally {
     // Clean up tracking to avoid memory leaks
     deletingTransactionIds.delete(transactionId);

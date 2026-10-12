@@ -34,8 +34,11 @@ export async function removeMany(table: string, ids: number[]) {
   if (table === 'transactions') {
     // For transactions, we need to handle linked transactions properly
     // Delete each transaction individually to trigger linked transaction logic
+    // Deleting one leg of a pair also deletes its partner, so skip ids already gone.
+    const deletedIds = new Set<number>();
     for (const id of ids) {
-      await deleteLinkedTransactions(id);
+      if (deletedIds.has(id)) continue;
+      await deleteLinkedTransactions(id, deletedIds);
     }
     return true;
   }

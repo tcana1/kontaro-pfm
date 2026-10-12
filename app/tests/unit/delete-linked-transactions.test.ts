@@ -11,6 +11,7 @@ const state = vi.hoisted(() => {
     eq(...args: any[]) { this.eqValues.push(...args); return this; }
     neq() { return this; }
     single() { return this; }
+    maybeSingle() { return this; }
     delete() { return this; }
     then(resolve: any) {
       state.allEqCalls.push(this.eqValues);
@@ -91,5 +92,49 @@ describe('deleteLinkedTransactions heuristic (P2-4)', () => {
     // Sibling delete ran (query 2) targeting id 2, then requested (query 3) id 1
     expect(state.allEqCalls[2]).toContain(2);
     expect(state.allEqCalls[3]).toContain(1);
+  });
+});
+
+describe('bulk delete of linked pairs', () => {
+  beforeEach(() => {
+    state.reset();
+    (supabaseService as any).deletingTransactionIds.clear();
+  });
+
+  it('deletes two full pairs without re-visiting partners already removed', async () => {
+    const tx = (id: number, account_id: number, to_account_id: number, amount: string) => ({
+      ...currentTx, id, account_id, to_account_id, amount,
+    });
+    state.queue = [
+      // id 2 (pair 1↔2): lookup, heuristic → 1, delete 1, delete 2
+      [{ data: tx(2, 20, 10, '50.00'), error: null }],
+      [{ data: [{ id: 1 }], error: null }],
+      [{ data: null, error: null }],
+      [{ data: null, error: null }],
+      // id 1 is skipped (already deleted as partner)
+      // id 4 (pair 3↔4): lookup, heuristic → 3, delete 3, delete 4
+      [{ data: tx(4, 20, 10, '70.00'), error: null }],
+      [{ data: [{ id: 3 }], error: null }],
+      [{ data: null, error: null }],
+      [{ data: null, error: null }],
+      // id 3 is skipped
+    ];
+
+    const result = await supabaseService.deleteMany('transactions', [2, 1, 4, 3]);
+
+    expect(result).toBe(true);
+    expect(state.queue.length).toBe(0);
+    expect(state.allEqCalls.length).toBe(8);
+    expect(state.allEqCalls[2]).toContain(1);
+    expect(state.allEqCalls[3]).toContain(2);
+    expect(state.allEqCalls[6]).toContain(3);
+    expect(state.allEqCalls[7]).toContain(4);
+  });
+
+  it('treats an already-deleted transaction as success instead of throwing', async () => {
+    state.queue = [[{ data: null, error: null }]];
+
+    await expect(supabaseService.deleteLinkedTransactions(99)).resolves.toBe(true);
+    expect(state.allEqCalls.length).toBe(1);
   });
 });
