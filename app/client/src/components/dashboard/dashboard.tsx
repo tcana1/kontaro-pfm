@@ -8,13 +8,27 @@ import { ChevronLeft, ChevronRight, FileText } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import HeadlineStrip from './headline-strip';
 import SurprisesCard from './surprises-card';
-import InstallmentPanel from './installment-panel';
 import LargestTransactionsCard from './largest-transactions-card';
 import NewMerchantsCard from './new-merchants-card';
-import CategorySparklines from './category-sparklines';
 import EmptyState from './empty-state';
 
+// Recharts ships with these two cards; load it off the dashboard entry chunk.
+const InstallmentPanel = lazy(() => import('./installment-panel'));
+const CategorySparklines = lazy(() => import('./category-sparklines'));
 const InsightDrawer = lazy(() => import('./insight-drawer'));
+
+function CardSkeleton({ rows, className = '' }: { rows: number; className?: string }) {
+  return (
+    <div className={`bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm ${className}`}>
+      <div className="h-3 w-24 bg-gray-100 dark:bg-gray-700 rounded animate-pulse mb-4" />
+      <div className="space-y-3">
+        {[...Array(rows)].map((_, i) => (
+          <div key={i} className="h-6 bg-gray-100 dark:bg-gray-700 rounded animate-pulse" />
+        ))}
+      </div>
+    </div>
+  );
+}
 import { useInsightRun, insightRunsQueryKey } from '@/hooks/useInsightRun';
 import { useMobileHeader } from '@/contexts/mobile-header-context';
 import { useFinance } from '@/contexts/finance-context';
@@ -199,10 +213,14 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <SurprisesCard selectedMonth={selectedMonth} />
-        <InstallmentPanel selectedMonth={selectedMonth} />
+        <Suspense fallback={<CardSkeleton rows={3} />}>
+          <InstallmentPanel selectedMonth={selectedMonth} />
+        </Suspense>
       </div>
 
-      <CategorySparklines selectedMonth={selectedMonth} />
+      <Suspense fallback={<CardSkeleton rows={5} />}>
+        <CategorySparklines selectedMonth={selectedMonth} />
+      </Suspense>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <LargestTransactionsCard selectedMonth={selectedMonth} />
