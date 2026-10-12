@@ -79,58 +79,46 @@ interface FieldRowProps {
   field: string;
   selected: 'a' | 'b';
   onSelect: (field: string, side: 'a' | 'b') => void;
+  // Short per-transaction identifier (created-date label) shown inline on mobile,
+  // where the side-by-side column headers are hidden.
+  metaA?: string;
+  metaB?: string;
   emptyLabel?: string;
 }
 
-const FieldRow: React.FC<FieldRowProps> = ({ label, valueA, valueB, field, selected, onSelect, emptyLabel = '—' }) => {
-  const aEmpty = !valueA;
-  const bEmpty = !valueB;
+const FieldRow: React.FC<FieldRowProps> = ({ label, valueA, valueB, field, selected, onSelect, metaA, metaB, emptyLabel = '—' }) => {
+  const option = (side: 'a' | 'b', value: string, meta: string | undefined) => (
+    <label
+      className={cn(
+        'flex items-center gap-2 rounded-md px-3 py-2 cursor-pointer text-sm transition-colors',
+        selected === side
+          ? 'bg-blue-50 dark:bg-blue-900/30 ring-1 ring-blue-300 dark:ring-blue-700'
+          : 'hover:bg-gray-50 dark:hover:bg-gray-800'
+      )}
+      onClick={() => onSelect(field, side)}
+    >
+      <input
+        type="radio"
+        name={field}
+        value={side}
+        checked={selected === side}
+        onChange={() => onSelect(field, side)}
+        className="accent-blue-500 shrink-0"
+      />
+      <span className="flex min-w-0 items-baseline gap-2">
+        {meta && <span className="md:hidden shrink-0 text-[10px] text-gray-400 tabular-nums">{meta}</span>}
+        <span className={cn('truncate', !value && 'text-gray-400 italic')}>{value || emptyLabel}</span>
+      </span>
+    </label>
+  );
 
+  // Mobile: label on top with the two options stacked full-width.
+  // Desktop (md+): label + both options in the fixed three-column grid.
   return (
-    <div className="grid grid-cols-[120px_1fr_1fr] items-center gap-2 py-2 border-b border-gray-100 dark:border-gray-800 last:border-0">
+    <div className="flex flex-col gap-1 py-2 border-b border-gray-100 dark:border-gray-800 last:border-0 md:grid md:grid-cols-[120px_1fr_1fr] md:items-center md:gap-2">
       <span className="text-xs font-medium text-gray-500 dark:text-gray-400">{label}</span>
-
-      {/* Transaction A option */}
-      <label
-        className={cn(
-          'flex items-center gap-2 rounded-md px-3 py-2 cursor-pointer text-sm transition-colors',
-          selected === 'a'
-            ? 'bg-blue-50 dark:bg-blue-900/30 ring-1 ring-blue-300 dark:ring-blue-700'
-            : 'hover:bg-gray-50 dark:hover:bg-gray-800'
-        )}
-        onClick={() => onSelect(field, 'a')}
-      >
-        <input
-          type="radio"
-          name={field}
-          value="a"
-          checked={selected === 'a'}
-          onChange={() => onSelect(field, 'a')}
-          className="accent-blue-500"
-        />
-        <span className={cn(aEmpty && 'text-gray-400 italic')}>{valueA || emptyLabel}</span>
-      </label>
-
-      {/* Transaction B option */}
-      <label
-        className={cn(
-          'flex items-center gap-2 rounded-md px-3 py-2 cursor-pointer text-sm transition-colors',
-          selected === 'b'
-            ? 'bg-blue-50 dark:bg-blue-900/30 ring-1 ring-blue-300 dark:ring-blue-700'
-            : 'hover:bg-gray-50 dark:hover:bg-gray-800'
-        )}
-        onClick={() => onSelect(field, 'b')}
-      >
-        <input
-          type="radio"
-          name={field}
-          value="b"
-          checked={selected === 'b'}
-          onChange={() => onSelect(field, 'b')}
-          className="accent-blue-500"
-        />
-        <span className={cn(bEmpty && 'text-gray-400 italic')}>{valueB || emptyLabel}</span>
-      </label>
+      {option('a', valueA, metaA)}
+      {option('b', valueB, metaB)}
     </div>
   );
 };
@@ -323,13 +311,15 @@ export const MergeTransactionDialog: React.FC<MergeTransactionDialogProps> = ({
 
   const a = candidate.transaction_a;
   const b = candidate.transaction_b;
+  const metaA = createdAtLabel(a.created_at);
+  const metaB = createdAtLabel(b.created_at);
   const needsSplitChoice = a.transaction_splits.length > 1 || b.transaction_splits.length > 1;
   const amountsDiffer = !needsSplitChoice &&
     parseFloat(String(a.amount)) !== parseFloat(String(b.amount));
 
   return (
     <Dialog open={open} onOpenChange={v => { if (!v) onClose(); }}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Merge className="h-5 w-5 text-orange-500" />
@@ -340,8 +330,8 @@ export const MergeTransactionDialog: React.FC<MergeTransactionDialogProps> = ({
           </p>
         </DialogHeader>
 
-        {/* Column headers */}
-        <div className="grid grid-cols-[120px_1fr_1fr] gap-2 mb-1">
+        {/* Column headers — desktop only; on mobile each option carries its own date inline */}
+        <div className="hidden md:grid grid-cols-[120px_1fr_1fr] gap-2 mb-1">
           <div />
           <div className="text-xs font-semibold text-center text-gray-600 dark:text-gray-400 px-3">
             {createdAtLabel(a.created_at)}
@@ -365,6 +355,8 @@ export const MergeTransactionDialog: React.FC<MergeTransactionDialogProps> = ({
             field="payee"
             selected={selections['payee'] ?? 'a'}
             onSelect={handleSelect}
+            metaA={metaA}
+            metaB={metaB}
           />
           <FieldRow
             label={t('Payment date')}
@@ -373,6 +365,8 @@ export const MergeTransactionDialog: React.FC<MergeTransactionDialogProps> = ({
             field="payment_date"
             selected={selections['payment_date'] ?? 'a'}
             onSelect={handleSelect}
+            metaA={metaA}
+            metaB={metaB}
           />
           <FieldRow
             label={t('Purchase date')}
@@ -381,6 +375,8 @@ export const MergeTransactionDialog: React.FC<MergeTransactionDialogProps> = ({
             field="purchase_date"
             selected={selections['purchase_date'] ?? 'a'}
             onSelect={handleSelect}
+            metaA={metaA}
+            metaB={metaB}
           />
           {/* Category and Notes only shown in single-split case; multi-split uses SplitSelector below */}
           {!needsSplitChoice && (
@@ -393,6 +389,8 @@ export const MergeTransactionDialog: React.FC<MergeTransactionDialogProps> = ({
                   field="amount"
                   selected={selections['amount'] ?? 'a'}
                   onSelect={handleSelect}
+                  metaA={metaA}
+                  metaB={metaB}
                 />
               )}
               <FieldRow
@@ -402,6 +400,8 @@ export const MergeTransactionDialog: React.FC<MergeTransactionDialogProps> = ({
                 field="category"
                 selected={selections['category'] ?? 'a'}
                 onSelect={handleSelect}
+                metaA={metaA}
+                metaB={metaB}
               />
               <FieldRow
                 label={t('Notes')}
@@ -410,6 +410,8 @@ export const MergeTransactionDialog: React.FC<MergeTransactionDialogProps> = ({
                 field="notes"
                 selected={selections['notes'] ?? 'a'}
                 onSelect={handleSelect}
+                metaA={metaA}
+                metaB={metaB}
                 emptyLabel={t('no notes')}
               />
             </>
