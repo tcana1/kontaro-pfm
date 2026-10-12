@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, lazy, Suspense } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useDateFnsLocale } from '@/lib/date-fns-locale';
@@ -12,8 +12,9 @@ import InstallmentPanel from './installment-panel';
 import LargestTransactionsCard from './largest-transactions-card';
 import NewMerchantsCard from './new-merchants-card';
 import CategorySparklines from './category-sparklines';
-import InsightDrawer from './insight-drawer';
 import EmptyState from './empty-state';
+
+const InsightDrawer = lazy(() => import('./insight-drawer'));
 import { useInsightRun, insightRunsQueryKey } from '@/hooks/useInsightRun';
 import { useMobileHeader } from '@/contexts/mobile-header-context';
 import { useFinance } from '@/contexts/finance-context';
@@ -89,6 +90,14 @@ export default function Dashboard() {
   const [selectedMonth, setSelectedMonth] = useState<Date>(startOfMonth(new Date()));
   const [pickerOpen, setPickerOpen] = useState(false);
   const [insightOpen, setInsightOpen] = useState(false);
+  // Mount the insight drawer (and its markdown chunk) only after the first open,
+  // then keep it mounted so the sheet close animation still plays.
+  const [insightLoaded, setInsightLoaded] = useState(false);
+
+  function openInsight() {
+    setInsightLoaded(true);
+    setInsightOpen(true);
+  }
 
   const canGoForward = isBefore(selectedMonth, today);
   const { data: insightRun } = useInsightRun(selectedMonth);
@@ -101,6 +110,7 @@ export default function Dashboard() {
   // Refetch on open so reports saved externally (via MCP agent) show up without a hard refresh.
   function handleInsightOpenChange(open: boolean) {
     if (open) {
+      setInsightLoaded(true);
       queryClient.invalidateQueries({ queryKey: insightRunsQueryKey });
     }
     setInsightOpen(open);
@@ -126,7 +136,7 @@ export default function Dashboard() {
         <ChevronRight className="h-4 w-4" />
       </button>
       <button
-        onClick={() => setInsightOpen(true)}
+        onClick={openInsight}
         className="ml-1 flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
       >
         <FileText className="h-3 w-3" />
@@ -176,7 +186,7 @@ export default function Dashboard() {
         </button>
 
         <button
-          onClick={() => setInsightOpen(true)}
+          onClick={openInsight}
           title={t('View analysis')}
           className="ml-2 flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
         >
@@ -199,12 +209,16 @@ export default function Dashboard() {
         <NewMerchantsCard selectedMonth={selectedMonth} />
       </div>
 
-      <InsightDrawer
-        open={insightOpen}
-        onOpenChange={handleInsightOpenChange}
-        run={insightRun ?? null}
-        selectedMonth={selectedMonth}
-      />
+      {insightLoaded && (
+        <Suspense fallback={null}>
+          <InsightDrawer
+            open={insightOpen}
+            onOpenChange={handleInsightOpenChange}
+            run={insightRun ?? null}
+            selectedMonth={selectedMonth}
+          />
+        </Suspense>
+      )}
     </div>
   );
 }
