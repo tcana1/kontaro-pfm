@@ -5,11 +5,8 @@ import { findLinkedTransaction } from '../transaction-query-helpers';
 import { deleteRow } from './rows';
 import { insertTransaction, updateTransactionRow } from './transaction-rows';
 
-const TRANSFER_PAYMENT_CATEGORY_ID = -4; // DB sentinel for Transfer/Payment category
-
-// The transfer/payment pair lifecycle. createUniqueTransaction and
-// convertToLinkedTransaction are mutually recursive with the pair builders, so
-// they all live here rather than being spread across modules.
+// The transfer/payment pair lifecycle: creation, conversion from a regular
+// transaction, update and deletion of both legs.
 
 async function getTransactionByHash(hash: string) {
   const { data, error } = await supabase
@@ -89,9 +86,8 @@ export interface ConvertedLinkedPair {
 // Atomically converts a regular transaction into a linked transfer/payment
 // pair (create primary + mirror, delete the original) via a single RPC call —
 // see the convert_transaction_to_linked migration for the server-side logic.
-// Used by UpdateTransactionCommand.performDeleteAndCreate(); the multi-step
-// createLinkedTransactions() path above remains for other callers (manual
-// transfer/payment creation, updateLinkedTransactions()).
+// The only conversion path: UpdateTransactionCommand and updateLinkedTransactions()
+// both go through it, so the original's statement_identifier is always carried over.
 export async function convertTransactionToLinked(
   transactionId: number,
   updates: Record<string, any>
@@ -122,12 +118,22 @@ export async function updateLinkedTransactions(transactionId: number, updates: R
       (currentTransaction.type !== 'transfer' && currentTransaction.type !== 'payment')) {
     // Regular transaction in the DB.
     // If the update itself carries linked fields, this is a conversion attempt
-    // -> do a real conversion (create linked pair + delete the original).
-    // Otherwise apply it as a plain row update directly (NOT via update(),
-    // which routes back here — that used to cause an infinite request loop).
+    // -> convert atomically via the RPC. Otherwise apply it as a plain row
+    // update directly (NOT via update(), which routes back here — that used to
+    // cause an infinite request loop).
     const converts = (updates.type === 'transfer' || updates.type === 'payment') && updates.to_account_id;
     if (converts) {
-      return convertToLinkedTransaction(currentTransaction, updates);
+      const { primary } = await convertTransactionToLinked(transactionId, {
+        account_id: updates.account_id,
+        to_account_id: updates.to_account_id,
+        payment_date: updates.payment_date,
+        amount: updates.amount,
+        payee: updates.payee,
+        notes: updates.notes,
+        type: updates.type,
+        category_id: updates.category_id,
+      });
+      return primary;
     }
     return updateTransactionRow(transactionId, updates);
   }
@@ -203,36 +209,6 @@ export async function updateLinkedTransactions(transactionId: number, updates: R
   }
 
   return updatedPrimary;
-}
-
-// Convert a regular transaction into a linked transfer/payment pair.
-// Mirrors performDeleteAndCreate() in UpdateTransactionCommand: creates the
-// linked pair first (create-before-delete), then removes the original row.
-async function convertToLinkedTransaction(currentTransaction: any, updates: Record<string, any>): Promise<any> {
-  const created = await createUniqueTransaction({
-    account_id: updates.account_id ?? currentTransaction.account_id,
-    to_account_id: updates.to_account_id,
-    payment_date: updates.payment_date ?? currentTransaction.payment_date,
-    purchase_date: updates.purchase_date ?? updates.payment_date ?? currentTransaction.purchase_date,
-    amount: updates.amount ?? currentTransaction.amount,
-    payee: updates.payee ?? currentTransaction.payee,
-    notes: updates.notes ?? currentTransaction.notes,
-    type: updates.type,
-    user_id: currentTransaction.user_id,
-    category_id: updates.category_id ?? currentTransaction.category_id ?? TRANSFER_PAYMENT_CATEGORY_ID,
-    status_id: updates.status_id ?? currentTransaction.status_id,
-    is_ignored: updates.is_ignored ?? currentTransaction.is_ignored,
-  });
-  // Pair created — remove the original row. If the delete fails the caller
-  // gets an error; the new linked pair is already in the DB so no data is
-  // lost, but the caller should surface the failure so the orphan is visible.
-  try {
-    await deleteRow('transactions', currentTransaction.id);
-  } catch (e) {
-    console.error('Error deleting original transaction during conversion (orphan id=%d):', currentTransaction.id, e);
-    throw e;
-  }
-  return created;
 }
 
 export const deletingTransactionIds = new Set<number>();

@@ -469,8 +469,10 @@ export class UpdateTransactionCommand implements ICommand {
     
     if (isExistingTransaction) {
       // Check if this is a conversion from regular transaction to linked transaction
+      // Forms hand us camelCase (toAccountId); normalize before reading any field.
+      const incoming = sanitizeTransactionForUpdate(this.newTransactionData);
       const isCurrentlyRegular = this.originalTransaction.type === 'transaction' && !this.originalTransaction.to_account_id;
-      const isBecomingLinked = (this.newTransactionData.type === 'transfer' || this.newTransactionData.type === 'payment') && (this.newTransactionData as any).to_account_id;
+      const isBecomingLinked = (incoming.type === 'transfer' || incoming.type === 'payment') && incoming.to_account_id;
       
       if (isCurrentlyRegular && isBecomingLinked) {
         // Check if original transaction is reconciled (using data we already have)
@@ -542,16 +544,16 @@ export class UpdateTransactionCommand implements ICommand {
   // (previously: a dedupe check + 2 account-name fetches + 2 inserts + 1 delete,
   // each a separate request with no atomicity across them).
   private async performDeleteAndCreate(): Promise<any> {
-    const _newData = this.newTransactionData as any;
+    const incoming = sanitizeTransactionForUpdate(this.newTransactionData);
     const updates = {
-      account_id: _newData.account_id,
-      to_account_id: _newData.to_account_id,
-      payment_date: _newData.payment_date || this.originalTransaction.payment_date,
-      amount: this.newTransactionData.amount ?? this.originalTransaction.amount,
-      payee: this.newTransactionData.payee || this.originalTransaction.payee,
-      notes: this.newTransactionData.notes ?? this.originalTransaction.notes,
-      type: this.newTransactionData.type,
-      category_id: _newData.category_id ?? -4, // Default to Transfer/Payment
+      account_id: incoming.account_id,
+      to_account_id: incoming.to_account_id,
+      payment_date: incoming.payment_date || this.originalTransaction.payment_date,
+      amount: incoming.amount ?? this.originalTransaction.amount,
+      payee: incoming.payee || this.originalTransaction.payee,
+      notes: incoming.notes ?? this.originalTransaction.notes,
+      type: incoming.type,
+      category_id: incoming.category_id ?? -4, // Default to Transfer/Payment
     };
 
     const result = await supabaseService.convertTransactionToLinked(this.originalTransaction.id, updates);
