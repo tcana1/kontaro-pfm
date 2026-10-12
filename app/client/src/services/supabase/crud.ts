@@ -1,6 +1,6 @@
 import { insertRow, updateRow, deleteRow, deleteRows } from './rows';
 import { insertTransaction, updateTransactionRow } from './transaction-rows';
-import { deleteLinkedTransactions, updateLinkedTransactions } from './linked-transactions';
+import { deleteLinkedTransactions, deleteTransactions, updateLinkedTransactions } from './linked-transactions';
 
 // Table-name dispatch. `transactions` needs split-aware and pair-aware handling;
 // every other table is a plain row operation.
@@ -32,15 +32,7 @@ export async function remove(table: string, id: number) {
 
 export async function removeMany(table: string, ids: number[]) {
   if (table === 'transactions') {
-    // For transactions, we need to handle linked transactions properly
-    // Delete each transaction individually to trigger linked transaction logic
-    // Deleting one leg of a pair also deletes its partner, so skip ids already gone.
-    const deletedIds = new Set<number>();
-    for (const id of ids) {
-      if (deletedIds.has(id)) continue;
-      await deleteLinkedTransactions(id, deletedIds);
-    }
-    return true;
+    return deleteTransactions(ids);
   }
   return deleteRows(table, ids);
 }

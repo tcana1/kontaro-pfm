@@ -21,10 +21,12 @@ const state = vi.hoisted(() => {
   return {
     FakeQuery,
     queue: [] as any[],
+    rpc: vi.fn(),
     allEqCalls: [] as any[][],
     reset() {
       this.queue = [];
       this.allEqCalls = [];
+      this.rpc.mockReset();
     },
   };
 });
@@ -32,7 +34,7 @@ const state = vi.hoisted(() => {
 vi.mock('../../client/src/lib/supabase', () => ({
   supabase: {
     from: () => new state.FakeQuery(state.queue.shift() ?? []),
-    rpc: vi.fn(),
+    rpc: (...args: any[]) => state.rpc(...args),
   },
 }));
 
@@ -95,24 +97,49 @@ describe('deleteLinkedTransactions heuristic (P2-4)', () => {
   });
 });
 
-describe('bulk delete of linked pairs', () => {
+describe('bulk delete (deleteMany)', () => {
   beforeEach(() => {
     state.reset();
     (supabaseService as any).deletingTransactionIds.clear();
   });
 
-  it('deletes two full pairs without re-visiting partners already removed', async () => {
+  it('deletes the whole selection with one RPC call and no per-row queries', async () => {
+    state.rpc.mockResolvedValue({ data: [1, 2, 3, 4], error: null });
+
+    const result = await supabaseService.deleteMany('transactions', [1, 2, 2, 3]);
+
+    expect(result).toBe(true);
+    expect(state.rpc).toHaveBeenCalledTimes(1);
+    expect(state.rpc).toHaveBeenCalledWith('delete_transactions', { p_ids: [1, 2, 3] });
+    expect(state.allEqCalls.length).toBe(0);
+  });
+
+  it('does nothing for an empty selection', async () => {
+    await expect(supabaseService.deleteMany('transactions', [])).resolves.toBe(true);
+    expect(state.rpc).not.toHaveBeenCalled();
+  });
+
+  it('propagates RPC errors without falling back to row-by-row deletes', async () => {
+    const failure = { code: 'P0001', message: 'Starting balance transactions cannot be deleted.' };
+    state.rpc.mockResolvedValue({ data: null, error: failure });
+
+    await expect(supabaseService.deleteMany('transactions', [1, 2])).rejects.toBe(failure);
+    expect(state.allEqCalls.length).toBe(0);
+  });
+
+  it('falls back to per-row deletes, skipping partners already removed, when the RPC is not deployed', async () => {
+    state.rpc.mockResolvedValue({ data: null, error: { code: 'PGRST202' } });
     const tx = (id: number, account_id: number, to_account_id: number, amount: string) => ({
       ...currentTx, id, account_id, to_account_id, amount,
     });
     state.queue = [
-      // id 2 (pair 1↔2): lookup, heuristic → 1, delete 1, delete 2
+      // id 2 (pair 1<->2): lookup, heuristic -> 1, delete 1, delete 2
       [{ data: tx(2, 20, 10, '50.00'), error: null }],
       [{ data: [{ id: 1 }], error: null }],
       [{ data: null, error: null }],
       [{ data: null, error: null }],
       // id 1 is skipped (already deleted as partner)
-      // id 4 (pair 3↔4): lookup, heuristic → 3, delete 3, delete 4
+      // id 4 (pair 3<->4): lookup, heuristic -> 3, delete 3, delete 4
       [{ data: tx(4, 20, 10, '70.00'), error: null }],
       [{ data: [{ id: 3 }], error: null }],
       [{ data: null, error: null }],
@@ -129,6 +156,13 @@ describe('bulk delete of linked pairs', () => {
     expect(state.allEqCalls[3]).toContain(2);
     expect(state.allEqCalls[6]).toContain(3);
     expect(state.allEqCalls[7]).toContain(4);
+  });
+});
+
+describe('deleteLinkedTransactions when the row is already gone', () => {
+  beforeEach(() => {
+    state.reset();
+    (supabaseService as any).deletingTransactionIds.clear();
   });
 
   it('treats an already-deleted transaction as success instead of throwing', async () => {

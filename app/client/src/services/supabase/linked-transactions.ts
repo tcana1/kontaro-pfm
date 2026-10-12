@@ -172,6 +172,25 @@ export async function updateLinkedTransactions(transactionId: number, updates: R
   return (data as any).primary;
 }
 
+// Deletes the ids plus the other leg of every transfer/payment pair among them,
+// atomically, in one request. Falls back to deleting one by one when the RPC is
+// not deployed yet (PGRST202 = function missing from the schema cache).
+export async function deleteTransactions(ids: number[]): Promise<boolean> {
+  const uniqueIds = [...new Set(ids)];
+  if (uniqueIds.length === 0) return true;
+
+  const { error } = await supabase.rpc('delete_transactions' as any, { p_ids: uniqueIds });
+  if (!error) return true;
+  if (error.code !== 'PGRST202') throw error;
+
+  const deletedIds = new Set<number>();
+  for (const id of uniqueIds) {
+    if (deletedIds.has(id)) continue;
+    await deleteLinkedTransactions(id, deletedIds);
+  }
+  return true;
+}
+
 export const deletingTransactionIds = new Set<number>();
 
 // `deletedIds`, when given, collects every id removed (primary and partner) so a
