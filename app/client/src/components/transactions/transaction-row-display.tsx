@@ -341,7 +341,7 @@ const TransactionRowDisplay: React.FC<TransactionRowDisplayProps> = ({
   })();
 
   const rowClassName = cn(
-    "border-b border-gray-200 dark:border-gray-700",
+    "group border-b border-gray-200 dark:border-gray-700",
     isSplitTransaction && "border-l-2 border-l-violet-400 dark:border-l-violet-500",
     isSpecialTransaction && "bg-muted/30",
     isIgnored && "opacity-50 italic",
@@ -490,6 +490,17 @@ const TransactionRowDisplay: React.FC<TransactionRowDisplayProps> = ({
       </td>
       <td className="px-4 text-sm h-[25px]">
         <div className="flex items-center gap-1">
+          {/* Edit — revealed on row hover, mirrors the mobile card's pencil. */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"
+            onClick={handleEditClick}
+            disabled={isOptimistic}
+            aria-label={t('Edit')}
+          >
+            <Edit className="h-4 w-4 text-gray-500" />
+          </Button>
           <Button
             variant="ghost"
             size="icon"

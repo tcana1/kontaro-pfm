@@ -264,6 +264,37 @@ const TransactionControls: React.FC<TransactionControlsProps> = React.memo(({
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 h-8" />
         </div>
 
+        {/* Undo/Redo — mobile only (desktop has them in the left toolbar group).
+            Hidden while the mobile search field is expanded to free up room. */}
+        {!mobileSearchOpen && (
+          <div className="md:hidden flex items-center">
+            <ActionTooltip label={t('Undo')}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-9 p-0 border-none hover:bg-transparent disabled:opacity-40"
+                onClick={onUndo}
+                disabled={!canUndo}
+                aria-label={t('Undo')}
+              >
+                <Undo className="!h-5 !w-5" />
+              </Button>
+            </ActionTooltip>
+            <ActionTooltip label={t('Redo')}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-9 p-0 border-none hover:bg-transparent disabled:opacity-40"
+                onClick={onRedo}
+                disabled={!canRedo}
+                aria-label={t('Redo')}
+              >
+                <Redo className="!h-5 !w-5" />
+              </Button>
+            </ActionTooltip>
+          </div>
+        )}
+
         {/* Filter Button */}
         {children}
 
