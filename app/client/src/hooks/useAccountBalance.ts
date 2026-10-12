@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabaseService } from '@/services/supabase-service';
 import { AccountBalance } from '@shared/types/account-balance';
 import { getTodayISO } from '@/lib/date-utils';
+import { useAuth } from '@/contexts/auth-context';
 
 /**
  * Hook to get account balance calculations
@@ -10,6 +11,10 @@ import { getTodayISO } from '@/lib/date-utils';
  */
 export function useAccountBalance(accountId?: number) {
   const today = getTodayISO();
+  // The sidebar mounts inside Layout before ProtectedRoute resolves auth, so without
+  // this gate the RPC fires as the anon role (which lacks EXECUTE) and logs a
+  // "permission denied for function get_account_balances" error on every login.
+  const { user, isLoading: authLoading } = useAuth();
   return useQuery<AccountBalance[]>({
     queryKey: ['account-balances', accountId, today],
     queryFn: async () => {
@@ -32,7 +37,7 @@ export function useAccountBalance(accountId?: number) {
         totalBalance: parseFloat(row.total_balance || '0'),
       })) || [];
     },
-    enabled: accountId === undefined || accountId > 0, // Only query for valid account IDs or all accounts
+    enabled: (accountId === undefined || accountId > 0) && !!user && !authLoading, // Valid account IDs (or all) and only once authenticated
     staleTime: 5000, // Cache for 5 seconds (reduced from 30s for faster updates)
     refetchOnWindowFocus: true, // Refetch when user returns to window
   });
