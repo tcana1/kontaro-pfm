@@ -25,8 +25,11 @@ enabled = false
 # key_path = "../certs/my-key.pem"
 
 [db]
-# Port to use for the local database URL.
-port = 54332
+# Port to use for the local database URL. Read from the DB_PORT env var so the
+# selfhost Docker flow has a single source of truth (.env); the migrate container
+# passes DB_PORT in. Host CLI usage (`supabase start`) needs DB_PORT exported —
+# see the "Local dev" section in the README. Defaults to 54332 via .env templates.
+port = "env(DB_PORT)"
 # Port used by db diff command to initialize the shadow database.
 shadow_port = 54330
 # Maximum amount of time to wait for health check when starting the local database.

@@ -121,6 +121,11 @@ services:
       # Cloud/prod: falls back to DATABASE_URL — same remote host, no need to
       # duplicate the connection string in .env.
       SUPABASE_DB_URL: ${SUPABASE_DB_URL:-${DATABASE_URL:-}}
+      # supabase/config.toml reads [db] port from this (port = "env(DB_PORT)").
+      # The CLI only talks plaintext to a host:port it recognizes as local, so
+      # this must match the DB_PORT the db container publishes. Harmless in cloud
+      # mode (the remote pooler host never matches 127.0.0.1, so it uses TLS).
+      DB_PORT: ${DB_PORT:-54332}
     command: ["migration", "up", "--db-url", "${SUPABASE_DB_URL:-${DATABASE_URL:-}}"]
     # Host networking: the CLI only allows plaintext connections to hosts it can
     # match against supabase/config.toml (default hostname 127.0.0.1). With host

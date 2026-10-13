@@ -189,13 +189,16 @@ Sign up at http://localhost:8181. To enable bank sync, see [Pluggy connector set
 ### Local dev — Supabase CLI
 
 ```bash
+export DB_PORT=54332    # required: supabase/config.toml reads [db] port from this
 supabase start          # note the URLs and keys it prints
 cp .env.example .env    # fill in SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_JWT_SECRET
                         # set SUPABASE_DB_URL=postgresql://postgres:postgres@127.0.0.1:54332/postgres
 docker compose up -d
 ```
 
-The `migrate` container uses host networking to reach the Supabase CLI DB at `127.0.0.1:54332`. This requires Linux (or Docker Desktop 4.34+ with host networking enabled on Mac/Windows).
+> **`DB_PORT` must be set before any `supabase` command.** `config.toml` resolves `[db] port` from it (`port = "env(DB_PORT)"`); without it the CLI aborts with `'db.port' cannot parse value as 'uint16'`. Export it in your shell as above, or drop `DB_PORT=54332` into a (gitignored) `supabase/.env`. To use a different port, change this value **and** `SUPABASE_DB_URL` / `DB_PORT` in `.env` to match.
+
+The `migrate` container uses host networking to reach the Supabase CLI DB at `127.0.0.1:$DB_PORT` (default `54332`). This requires Linux (or Docker Desktop 4.34+ with host networking enabled on Mac/Windows).
 
 ---
 
