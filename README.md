@@ -234,6 +234,8 @@ To enable automated daily bank sync:
 
 PFM ships a [Model Context Protocol](https://modelcontextprotocol.io) server that exposes your financial data to AI assistants (Claude Code, OpenCode, Cursor, or any MCP client). The server runs alongside the app and is proxied at `/mcp` by the same nginx instance, so no extra port needs to be opened.
 
+> **Don't want the AI server?** The MCP is opt-in via the `mcp` Compose profile. The env templates include it in `COMPOSE_PROFILES` by default; remove `mcp` from that line in your `.env` to run the stack (app + importer) without it. Nothing else depends on the MCP.
+
 ### Setup
 
 **1. Generate an API key** — sign in, go to **Settings → Profile → API Key**, and generate one.

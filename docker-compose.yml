@@ -75,6 +75,10 @@ services:
     build:
       context: ./mcp
       dockerfile: Dockerfile
+    # Opt-in via the "mcp" Compose profile. The env templates put "mcp" in
+    # COMPOSE_PROFILES by default; remove it there to run the stack without the
+    # AI server. Nothing else depends on this service, so dropping it is safe.
+    profiles: [mcp]
     # Bind to loopback only. The app's nginx proxies /mcp on the internal network,
     # so this port is never exposed publicly; the localhost mapping keeps it reachable
     # for direct MCP clients / debugging on the host.
