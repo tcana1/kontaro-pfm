@@ -75,6 +75,19 @@ Kontaro is an open-source, self-hosted personal finance manager built for people
 | **Cloud** | Supabase Cloud | Supabase Cloud | Managed DB, no infra to run |
 | **Dev** | Supabase CLI (`supabase start`) | Supabase CLI | Local development |
 
+### Auth modes (JWT signing)
+
+Kontaro accepts both of Supabase's token-signing schemes, so you don't have to migrate your project to get it running:
+
+| Mode | API key | JWT signing | Set in `.env` |
+|---|---|---|---|
+| **Cloud** | legacy anon key **or** publishable key (`sb_publishable_…`) | **new JWT Signing Keys** (asymmetric ES256/RS256) **or** legacy HS256 secret | `SUPABASE_JWT_SIGNING_KEY` (new) **or** `SUPABASE_JWT_SECRET` (legacy) |
+| **Selfhost** | n/a — local GoTrue | **HS256 shared secret only** | `SUPABASE_JWT_SECRET` |
+
+- **Cloud, new mode:** the importer verifies user tokens against your project's JWKS automatically (no secret needed); the MCP mints its own tokens and needs the private signing key in `SUPABASE_JWT_SIGNING_KEY`. See the commented block in `.env.example`.
+- **Cloud, legacy mode:** uncomment `SUPABASE_JWT_SECRET` instead — still valid until Supabase retires the legacy secret.
+- **Selfhost** uses the HS256 shared secret by design (GoTrue signs, PostgREST / importer / MCP verify with the same value). Asymmetric signing keys are a Supabase Cloud feature and don't apply.
+
 ### Selfhost — full local stack
 
 Everything runs locally: Postgres, GoTrue (auth), PostgREST, the app, and the importer. No Supabase account needed.
@@ -141,8 +154,8 @@ Fill in `.env`:
 | Variable | Where to find it |
 |---|---|
 | `SUPABASE_URL` | Project Settings → API → Project URL |
-| `SUPABASE_ANON_KEY` | Project Settings → API → Publishable key |
-| `SUPABASE_JWT_SECRET` | Project Settings → API → JWT Secret |
+| `SUPABASE_ANON_KEY` | Project Settings → API → Publishable key (or the legacy anon key) |
+| JWT signing | See [Auth modes](#auth-modes-jwt-signing) — set `SUPABASE_JWT_SIGNING_KEY` (new) or `SUPABASE_JWT_SECRET` (legacy) |
 | `DATABASE_URL` | Project Settings → Database → Connection Pooling → **Session pooler** (see note below) |
 | `SECRETS_ENC_KEY` | Generate: `python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"` |
 

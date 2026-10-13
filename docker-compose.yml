@@ -82,6 +82,11 @@ services:
       - "127.0.0.1:${MCP_PORT:-3100}:3100"
     environment:
       SUPABASE_JWT_SECRET: ${SUPABASE_JWT_SECRET:-}
+      # Cloud with JWT Signing Keys: imported private key (JWK JSON or PEM) the MCP
+      # uses to mint ES256/RS256 user tokens. Leave unset for HS256 (selfhost / cloud
+      # before revoking the legacy secret).
+      SUPABASE_JWT_SIGNING_KEY: ${SUPABASE_JWT_SIGNING_KEY:-}
+      SUPABASE_JWT_KID: ${SUPABASE_JWT_KID:-}
       SUPABASE_URL: ${SUPABASE_URL:-}
       SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY:-}
       POSTGREST_URL: ${POSTGREST_URL:-}

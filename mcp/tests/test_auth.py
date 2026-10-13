@@ -81,6 +81,67 @@ def test_jwt_wrong_secret_is_rejected():
         pyjwt.decode(token, "wrong-secret", algorithms=["HS256"], audience="authenticated")
 
 
+# ── Asymmetric (ES256) signing — JWT Signing Keys ─────────────────────────────
+
+# Example EC P-256 JWK from the Supabase docs (includes the private component `d`).
+_ES256_JWK = (
+    '{"kty":"EC","kid":"3a18cfe2-7226-43b0-bbb4-7c5242f2406e",'
+    '"d":"RDbwqThwtGP4WnvACvO_0nL0oMMSmMFSYMPosprlAog","crv":"P-256",'
+    '"x":"gyLVvp9dyEgylYH7nR2E2qdQ_-9Pv5i1tk7c2qZD4Nk",'
+    '"y":"CD9RfYOTyjR5U-PC9UDlsthRpc7vAQQQ2FTt8UsX0fY"}'
+)
+
+
+def test_load_signing_key_from_jwk_derives_es256_and_kid():
+    from server import _load_signing_key
+
+    key, alg, kid = _load_signing_key(_ES256_JWK, "")
+    assert alg == "ES256"
+    assert kid == "3a18cfe2-7226-43b0-bbb4-7c5242f2406e"
+    token = pyjwt.encode({"sub": "x"}, key, algorithm="ES256")
+    pyjwt.decode(token, key.public_key(), algorithms=["ES256"], options={"verify_aud": False})
+
+
+def test_load_signing_key_kid_override_wins():
+    from server import _load_signing_key
+
+    _, _, kid = _load_signing_key(_ES256_JWK, "override-kid")
+    assert kid == "override-kid"
+
+
+def test_mint_jwt_es256_when_signing_key_configured():
+    from server import _load_signing_key
+
+    key, alg, kid = _load_signing_key(_ES256_JWK, "")
+    with patch("server._SIGNING_KEY", key), \
+         patch("server._SIGNING_ALG", alg), \
+         patch("server._SIGNING_KID", kid):
+        token = _mint_jwt(_TEST_USER_ID)
+    header = pyjwt.get_unverified_header(token)
+    assert header["alg"] == "ES256"
+    assert header["kid"] == kid
+    payload = pyjwt.decode(
+        token, key.public_key(), algorithms=["ES256"], audience="authenticated"
+    )
+    assert payload["sub"] == _TEST_USER_ID
+    assert payload["role"] == "authenticated"
+    assert payload["aud"] == "authenticated"
+
+
+def test_mint_jwt_es256_rejected_by_wrong_public_key():
+    from cryptography.hazmat.primitives.asymmetric import ec
+    from server import _load_signing_key
+
+    key, alg, kid = _load_signing_key(_ES256_JWK, "")
+    other_pub = ec.generate_private_key(ec.SECP256R1()).public_key()
+    with patch("server._SIGNING_KEY", key), \
+         patch("server._SIGNING_ALG", alg), \
+         patch("server._SIGNING_KID", kid):
+        token = _mint_jwt(_TEST_USER_ID)
+    with pytest.raises(pyjwt.InvalidSignatureError):
+        pyjwt.decode(token, other_pub, algorithms=["ES256"], audience="authenticated")
+
+
 # ── Middleware: missing / invalid key ─────────────────────────────────────────
 
 @pytest.mark.asyncio

@@ -12,7 +12,7 @@ dual-mode fallthrough (bad JWT + valid API key), and contextvar propagation.
 import hashlib
 import os
 from datetime import datetime, timedelta, timezone
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import jwt as pyjwt
 import pytest
@@ -79,6 +79,79 @@ def test_no_secret_and_no_jwks_returns_none():
 def test_malformed_token_returns_none():
     with patch("src.auth._SUPABASE_JWT_SECRET", _JWT_SECRET):
         assert _user_id_from_jwt("not.a.jwt") is None
+
+
+# ── ES256 via JWKS (new Supabase JWT Signing Keys) ────────────────────────────
+
+# Example EC P-256 JWK from the Supabase docs (includes the private component `d`).
+_ES256_JWK = (
+    '{"kty":"EC","kid":"3a18cfe2-7226-43b0-bbb4-7c5242f2406e",'
+    '"d":"RDbwqThwtGP4WnvACvO_0nL0oMMSmMFSYMPosprlAog","crv":"P-256",'
+    '"x":"gyLVvp9dyEgylYH7nR2E2qdQ_-9Pv5i1tk7c2qZD4Nk",'
+    '"y":"CD9RfYOTyjR5U-PC9UDlsthRpc7vAQQQ2FTt8UsX0fY"}'
+)
+
+
+def _make_es256_jwt(
+    user_id: str = _TEST_USER_ID,
+    exp_delta: timedelta = timedelta(hours=1),
+    audience: str = "authenticated",
+    include_sub: bool = True,
+) -> str:
+    key = pyjwt.algorithms.ECAlgorithm.from_jwk(_ES256_JWK)
+    now = datetime.now(timezone.utc)
+    payload: dict = {"role": "authenticated", "aud": audience, "iat": now, "exp": now + exp_delta}
+    if include_sub:
+        payload["sub"] = user_id
+    return pyjwt.encode(
+        payload, key, algorithm="ES256",
+        headers={"kid": "3a18cfe2-7226-43b0-bbb4-7c5242f2406e"},
+    )
+
+
+def _es256_jwks_mock() -> MagicMock:
+    """A PyJWKClient stand-in whose signing key is the public half of _ES256_JWK."""
+    pub = pyjwt.algorithms.ECAlgorithm.from_jwk(_ES256_JWK).public_key()
+    signing_key = MagicMock()
+    signing_key.key = pub
+    client = MagicMock()
+    client.get_signing_key_from_jwt.return_value = signing_key
+    return client
+
+
+def test_valid_es256_jwt_via_jwks_returns_user_id():
+    with patch("src.auth._SUPABASE_JWT_SECRET", ""), patch("src.auth._jwks_client", _es256_jwks_mock()):
+        assert _user_id_from_jwt(_make_es256_jwt()) == _TEST_USER_ID
+
+
+def test_es256_falls_through_when_hs256_secret_is_set():
+    # Secret is configured but the token is ES256 — HS256 verify fails, JWKS wins.
+    with patch("src.auth._SUPABASE_JWT_SECRET", _JWT_SECRET), patch("src.auth._jwks_client", _es256_jwks_mock()):
+        assert _user_id_from_jwt(_make_es256_jwt()) == _TEST_USER_ID
+
+
+def test_expired_es256_jwt_returns_none():
+    with patch("src.auth._SUPABASE_JWT_SECRET", ""), patch("src.auth._jwks_client", _es256_jwks_mock()):
+        assert _user_id_from_jwt(_make_es256_jwt(exp_delta=timedelta(hours=-1))) is None
+
+
+def test_es256_wrong_audience_returns_none():
+    with patch("src.auth._SUPABASE_JWT_SECRET", ""), patch("src.auth._jwks_client", _es256_jwks_mock()):
+        assert _user_id_from_jwt(_make_es256_jwt(audience="service_role")) is None
+
+
+def test_es256_missing_sub_returns_none():
+    with patch("src.auth._SUPABASE_JWT_SECRET", ""), patch("src.auth._jwks_client", _es256_jwks_mock()):
+        assert _user_id_from_jwt(_make_es256_jwt(include_sub=False)) is None
+
+
+def test_es256_unknown_kid_returns_none():
+    # After a key rotation the kid may be unknown — the JWKS client raises; must
+    # degrade to None rather than crash.
+    client = MagicMock()
+    client.get_signing_key_from_jwt.side_effect = Exception("kid not found in JWKS")
+    with patch("src.auth._SUPABASE_JWT_SECRET", ""), patch("src.auth._jwks_client", client):
+        assert _user_id_from_jwt(_make_es256_jwt()) is None
 
 
 # ── HTTP Bearer tests via GET /import-rules (simplest authenticated endpoint) ─

@@ -23,6 +23,8 @@ logger = logging.getLogger(__name__)
 
 _DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres@db:5432/postgres")
 _JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET", "")
+_JWT_SIGNING_KEY_RAW = os.getenv("SUPABASE_JWT_SIGNING_KEY", "")
+_JWT_KID = os.getenv("SUPABASE_JWT_KID", "")
 _SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY", "")
 
 _supabase_url = os.getenv("SUPABASE_URL", "").rstrip("/")
@@ -35,8 +37,46 @@ _POSTGREST_URL = (
 
 _POSTGREST_EXTRA_HEADERS: dict = {"apikey": _SUPABASE_ANON_KEY} if _SUPABASE_ANON_KEY else {}
 
-if not _JWT_SECRET:
-    raise RuntimeError("SUPABASE_JWT_SECRET is required")
+
+def _load_signing_key(raw: str, kid_override: str) -> tuple[Any, str, Optional[str]]:
+    """Parse an asymmetric signing key (JWK JSON or PEM) used to mint user JWTs.
+
+    Returns (key, algorithm, kid). The algorithm is derived from the key type
+    (EC -> ES256, RSA -> RS256) so the MCP can sign with whatever Supabase JWT
+    signing key is imported. kid comes from the JWK itself or SUPABASE_JWT_KID.
+    """
+    raw = raw.strip()
+    if raw.startswith("{"):
+        jwk = json.loads(raw)
+        kty = jwk.get("kty")
+        if kty == "EC":
+            return pyjwt.algorithms.ECAlgorithm.from_jwk(raw), "ES256", kid_override or jwk.get("kid")
+        if kty == "RSA":
+            return pyjwt.algorithms.RSAAlgorithm.from_jwk(raw), "RS256", kid_override or jwk.get("kid")
+        raise RuntimeError(f"Unsupported JWK kty for signing: {kty!r} (need EC or RSA)")
+    from cryptography.hazmat.primitives.asymmetric import ec, rsa
+    from cryptography.hazmat.primitives.serialization import load_pem_private_key
+
+    key = load_pem_private_key(raw.encode(), password=None)
+    if isinstance(key, ec.EllipticCurvePrivateKey):
+        alg = "ES256"
+    elif isinstance(key, rsa.RSAPrivateKey):
+        alg = "RS256"
+    else:
+        raise RuntimeError("Unsupported PEM key type for signing (need EC or RSA)")
+    if not kid_override:
+        raise RuntimeError("SUPABASE_JWT_KID is required when SUPABASE_JWT_SIGNING_KEY is a PEM")
+    return key, alg, kid_override
+
+
+_SIGNING_KEY: Optional[Any] = None
+_SIGNING_ALG: Optional[str] = None
+_SIGNING_KID: Optional[str] = None
+if _JWT_SIGNING_KEY_RAW:
+    _SIGNING_KEY, _SIGNING_ALG, _SIGNING_KID = _load_signing_key(_JWT_SIGNING_KEY_RAW, _JWT_KID)
+
+if not _JWT_SECRET and _SIGNING_KEY is None:
+    raise RuntimeError("Either SUPABASE_JWT_SECRET or SUPABASE_JWT_SIGNING_KEY is required")
 
 # ── Per-request user context ──────────────────────────────────────────────────
 _current_jwt: ContextVar[str] = ContextVar("current_jwt")
@@ -57,17 +97,20 @@ def _resolve_user_id_sync(api_key: str) -> Optional[str]:
 
 def _mint_jwt(user_id: str) -> str:
     now = datetime.now(timezone.utc)
-    return pyjwt.encode(
-        {
-            "sub": user_id,
-            "role": "authenticated",
-            "aud": "authenticated",
-            "iat": now,
-            "exp": now + timedelta(minutes=10),
-        },
-        _JWT_SECRET,
-        algorithm="HS256",
-    )
+    payload = {
+        "sub": user_id,
+        "role": "authenticated",
+        "aud": "authenticated",
+        "iat": now,
+        "exp": now + timedelta(minutes=10),
+    }
+    # Asymmetric signing key (ES256/RS256) when configured — required once the
+    # project revokes the legacy HS256 secret. Falls back to HS256 with the shared
+    # secret (selfhost, and cloud before revocation).
+    if _SIGNING_KEY is not None:
+        headers = {"kid": _SIGNING_KID} if _SIGNING_KID else None
+        return pyjwt.encode(payload, _SIGNING_KEY, algorithm=_SIGNING_ALG, headers=headers)
+    return pyjwt.encode(payload, _JWT_SECRET, algorithm="HS256")
 
 
 # ── PostgREST client ──────────────────────────────────────────────────────────
