@@ -107,7 +107,7 @@ const FieldRow: React.FC<FieldRowProps> = ({ label, valueA, valueB, field, selec
       />
       <span className="flex min-w-0 items-baseline gap-2">
         {meta && <span className="md:hidden shrink-0 text-[10px] text-gray-400 tabular-nums">{meta}</span>}
-        <span className={cn('truncate', !value && 'text-gray-400 italic')}>{value || emptyLabel}</span>
+        <span className={cn('truncate', !value && 'text-gray-400 italic')} title={value || undefined}>{value || emptyLabel}</span>
       </span>
     </label>
   );
@@ -115,7 +115,7 @@ const FieldRow: React.FC<FieldRowProps> = ({ label, valueA, valueB, field, selec
   // Mobile: label on top with the two options stacked full-width.
   // Desktop (md+): label + both options in the fixed three-column grid.
   return (
-    <div className="flex flex-col gap-1 py-2 border-b border-gray-100 dark:border-gray-800 last:border-0 md:grid md:grid-cols-[120px_1fr_1fr] md:items-center md:gap-2">
+    <div className="flex flex-col gap-1 py-2 border-b border-gray-100 dark:border-gray-800 last:border-0 md:grid md:grid-cols-[120px_minmax(0,1fr)_minmax(0,1fr)] md:items-center md:gap-2">
       <span className="text-xs font-medium text-gray-500 dark:text-gray-400">{label}</span>
       {option('a', valueA, metaA)}
       {option('b', valueB, metaB)}
@@ -331,7 +331,7 @@ export const MergeTransactionDialog: React.FC<MergeTransactionDialogProps> = ({
         </DialogHeader>
 
         {/* Column headers — desktop only; on mobile each option carries its own date inline */}
-        <div className="hidden md:grid grid-cols-[120px_1fr_1fr] gap-2 mb-1">
+        <div className="hidden md:grid grid-cols-[120px_minmax(0,1fr)_minmax(0,1fr)] gap-2 mb-1">
           <div />
           <div className="text-xs font-semibold text-center text-gray-600 dark:text-gray-400 px-3">
             {createdAtLabel(a.created_at)}
