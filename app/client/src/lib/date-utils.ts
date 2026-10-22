@@ -678,6 +678,22 @@ export function normalizeDateFormat(value: string | null | undefined): string {
   return value && (DATE_FORMATS as readonly string[]).includes(value) ? value : DEFAULT_DATE_FORMAT;
 }
 
+/**
+ * Apply an edit to one end of a date range, dragging the other end along when the
+ * result would be inverted (start after end), so reports never query an empty range.
+ */
+export function editDateRange(
+  start: Date,
+  end: Date,
+  edited: 'start' | 'end',
+  date: Date,
+): [Date, Date] {
+  if (edited === 'start') {
+    return localDateString(date) > localDateString(end) ? [date, date] : [date, end];
+  }
+  return localDateString(date) < localDateString(start) ? [date, date] : [start, date];
+}
+
 export const isAllTimeStart = (startDate: Date): boolean =>
   startDate.getTime() === new Date(1900, 0, 1).getTime();
 

@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
+  editDateRange,
   toISODateString,
   formatDateForDisplay,
   parseDateForDatabase,
@@ -363,5 +364,29 @@ describe('today at a late local hour', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+describe('editDateRange', () => {
+  const start = new Date(2026, 0, 1);
+  const end = new Date(2026, 8, 30);
+
+  it('keeps the other end when the range stays valid', () => {
+    expect(editDateRange(start, end, 'start', new Date(2026, 2, 1))).toEqual([new Date(2026, 2, 1), end]);
+    expect(editDateRange(start, end, 'end', new Date(2026, 5, 30))).toEqual([start, new Date(2026, 5, 30)]);
+  });
+
+  it('drags the end to the new start when start moves past it', () => {
+    const d = new Date(2026, 9, 1);
+    expect(editDateRange(start, end, 'start', d)).toEqual([d, d]);
+  });
+
+  it('drags the start to the new end when end moves before it', () => {
+    const d = new Date(2025, 11, 31);
+    expect(editDateRange(start, end, 'end', d)).toEqual([d, d]);
+  });
+
+  it('accepts a single-day range', () => {
+    expect(editDateRange(start, end, 'end', start)).toEqual([start, start]);
   });
 });

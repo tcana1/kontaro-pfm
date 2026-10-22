@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button';
 import { CalendarIcon } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { formatDateForDisplay } from '@/lib/date-utils';
+import { editDateRange, formatDateForDisplay, localDateFromString, localDateString } from '@/lib/date-utils';
+import { useDateFnsLocale } from '@/lib/date-fns-locale';
 import { useFinance } from '@/contexts/finance-context';
 
 interface DateRangeSelectorProps {
@@ -13,7 +14,6 @@ interface DateRangeSelectorProps {
   onChange: (startDate: Date, endDate: Date) => void;
 }
 
-
 const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({
   startDate,
   endDate,
@@ -21,6 +21,7 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({
 }) => {
   const { t } = useTranslation();
   const { locale, dateFormat } = useFinance();
+  const dateLocale = useDateFnsLocale();
   const [calendarOpen, setCalendarOpen] = useState(false);
 
   const getDisplayText = () => {
@@ -31,6 +32,16 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({
       : `${formatDateForDisplay(startDate, locale, dateFormat)} - ${formatDateForDisplay(endDate, locale, dateFormat)}`;
   };
 
+  const handleEdit = (edited: 'start' | 'end', date: Date) => {
+    const [start, end] = editDateRange(startDate, endDate, edited, date);
+    onChange(start, end);
+  };
+
+  const handleNativeInput = (edited: 'start' | 'end') => (e: React.ChangeEvent<HTMLInputElement>) => {
+    const date = localDateFromString(e.target.value);
+    if (date) handleEdit(edited, date);
+  };
+
   return (
     <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
       <PopoverTrigger asChild>
@@ -39,14 +50,35 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({
           {getDisplayText()}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align="start">
-        <div className="flex">
+      <PopoverContent className="w-[calc(100vw-2rem)] max-w-sm p-0 md:w-auto md:max-w-none" align="start">
+        <div className="md:hidden space-y-3 p-3">
+          <div>
+            <label className="text-sm font-medium block mb-1">{t('Start Date')}</label>
+            <input
+              type="date"
+              value={localDateString(startDate)}
+              onChange={handleNativeInput('start')}
+              className="w-full h-9 px-2 text-sm border border-input rounded-md bg-background"
+            />
+          </div>
+          <div>
+            <label className="text-sm font-medium block mb-1">{t('End Date')}</label>
+            <input
+              type="date"
+              value={localDateString(endDate)}
+              onChange={handleNativeInput('end')}
+              className="w-full h-9 px-2 text-sm border border-input rounded-md bg-background"
+            />
+          </div>
+        </div>
+        <div className="hidden md:flex">
           <div className="p-3 border-r">
             <div className="text-sm font-medium mb-2">{t('Start Date')}</div>
             <Calendar
               mode="single"
+              locale={dateLocale}
               selected={startDate}
-              onSelect={(date) => date && onChange(date, endDate)}
+              onSelect={(date) => date && handleEdit('start', date)}
               initialFocus
             />
           </div>
@@ -54,8 +86,9 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({
             <div className="text-sm font-medium mb-2">{t('End Date')}</div>
             <Calendar
               mode="single"
+              locale={dateLocale}
               selected={endDate}
-              onSelect={(date) => date && onChange(startDate, date)}
+              onSelect={(date) => date && handleEdit('end', date)}
             />
           </div>
         </div>
