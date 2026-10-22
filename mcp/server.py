@@ -47,8 +47,12 @@ def _resolve_user_id_sync(api_key: str) -> Optional[str]:
     key_hash = hashlib.sha256(api_key.encode()).hexdigest()
     with psycopg2.connect(_DATABASE_URL) as conn:
         with conn.cursor() as cur:
+            # UPDATE ... RETURNING, not SELECT: stamping last_used_at here costs no
+            # extra round trip. Don't try to throttle the write with a time predicate —
+            # inside the window the statement matches no row and auth would 403.
             cur.execute(
-                "SELECT user_id::text FROM user_api_keys WHERE key_hash = %s AND revoked_at IS NULL",
+                "UPDATE user_api_keys SET last_used_at = now() "
+                "WHERE key_hash = %s AND revoked_at IS NULL RETURNING user_id::text",
                 (key_hash,),
             )
             row = cur.fetchone()

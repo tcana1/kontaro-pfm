@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/auth-context';
+import { useFinance } from '@/contexts/finance-context';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,6 +21,7 @@ const IMPORTER_URL = getImporterUrl();
 const ProfileSettings: React.FC = () => {
   const { t } = useTranslation();
   const { user, updateProfile, updatePassword } = useAuth();
+  const { locale } = useFinance();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -364,6 +366,19 @@ const ProfileSettings: React.FC = () => {
                 : (apiKey ? t('Rotate Key') : t('Generate Key'))}
             </Button>
           </div>
+        )}
+
+        {!revealedKey && apiKey && (
+          <p className="text-xs text-gray-500 dark:text-gray-500">
+            {apiKey.last_used_at
+              ? t('Last used {{date}}', {
+                  date: new Date(apiKey.last_used_at).toLocaleString(locale, {
+                    dateStyle: 'medium',
+                    timeStyle: 'short',
+                  }),
+                })
+              : t('Never used')}
+          </p>
         )}
 
         <p className="text-xs text-gray-500 dark:text-gray-500">
