@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+import { useDoubleTap } from "@/hooks/use-double-tap";
 import { useTranslation } from 'react-i18next';
 import { format } from 'date-fns';
 import { useServiceQuery } from '@/hooks/useServiceQuery';
@@ -24,6 +25,7 @@ const EXPANDED = 8;
 
 export default function NewMerchantsCard({ selectedMonth }: Props) {
   const { t } = useTranslation();
+  const bindDoubleTap = useDoubleTap();
   const { currency } = useFinance();
   const monthKey = format(selectedMonth, 'yyyy-MM');
   const [expanded, setExpanded] = useState(false);
@@ -63,14 +65,14 @@ export default function NewMerchantsCard({ selectedMonth }: Props) {
           {items.map(item => (
             <div
               key={item.payee}
-              className="flex items-center gap-3 px-2 py-2 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+              className="flex items-center gap-3 px-2 py-2 rounded-lg cursor-pointer touch-manipulation hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
               title={t('Double-click to view transactions')}
-              onDoubleClick={() => openTransactionDrilldown({
+              {...bindDoubleTap(() => openTransactionDrilldown({
                 month: monthKey,
                 search: item.payee,
                 sortBy: 'amount',
                 sortDirection: 'asc',
-              })}
+              }))}
             >
               <div className="flex-1 min-w-0">
                 <span className="block text-sm text-gray-700 dark:text-gray-300 truncate">

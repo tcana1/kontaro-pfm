@@ -1,5 +1,6 @@
 
 import React, { useMemo, useState } from 'react';
+import { useDoubleTap } from "@/hooks/use-double-tap";
 import { useTranslation } from 'react-i18next';
 import { useDateFnsLocale } from '@/lib/date-fns-locale';
 import { format, parseISO } from 'date-fns';
@@ -98,6 +99,7 @@ function Sparkline({ months, color, currentMonth, currency, onBarClick }: Sparkl
 
 export default function CategorySparklines({ selectedMonth }: Props) {
   const { t } = useTranslation();
+  const bindDoubleTap = useDoubleTap();
   const { currency } = useFinance();
   const monthKey = format(selectedMonth, 'yyyy-MM');
   const [showAll, setShowAll] = useState(false);
@@ -164,14 +166,14 @@ export default function CategorySparklines({ selectedMonth }: Props) {
               return (
                 <div
                   key={cat.category_id}
-                  className="flex items-center gap-3 px-5 py-2.5 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors"
+                  className="flex items-center gap-3 px-5 py-2.5 cursor-pointer touch-manipulation hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors"
                   title={t('Double-click to view transactions')}
-                  onDoubleClick={() => openTransactionDrilldown({
+                  {...bindDoubleTap(() => openTransactionDrilldown({
                     month: monthKey,
                     categoryId: cat.category_id,
                     sortBy: 'amount',
                     sortDirection: 'asc',
-                  })}
+                  }))}
                 >
                   {/* Dot + name */}
                   <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -188,6 +190,7 @@ export default function CategorySparklines({ selectedMonth }: Props) {
                   <div
                     className="flex-shrink-0 hidden sm:block"
                     onDoubleClick={e => e.stopPropagation()}
+                    onTouchEnd={e => e.stopPropagation()}
                   >
                     <Sparkline
                       months={cat.months}

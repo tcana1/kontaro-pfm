@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useDoubleTap } from "@/hooks/use-double-tap";
 import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useServiceQuery } from "@/hooks/useServiceQuery";
@@ -66,6 +67,7 @@ const WeekdayHeatmapReport: React.FC<WeekdayHeatmapReportProps> = ({
   filters,
 }) => {
   const { t } = useTranslation();
+  const bindDoubleTap = useDoubleTap();
   const { currency, categories, categoryGroups, locale } = useFinance();
   const [heatmapData, setHeatmapData] = useState<
     Map<string, Map<number, CellValues>>
@@ -209,7 +211,7 @@ const WeekdayHeatmapReport: React.FC<WeekdayHeatmapReportProps> = ({
                       return (
                         <td key={wd.value} className="px-1 py-1">
                           <div
-                            className="rounded-lg px-2 py-3 text-center text-sm font-semibold"
+                            className="rounded-lg px-2 py-3 text-center text-sm font-semibold touch-manipulation"
                             style={{
                               backgroundColor: getCellBg(val, maxValue),
                               color: getCellFg(val, maxValue),
@@ -219,7 +221,7 @@ const WeekdayHeatmapReport: React.FC<WeekdayHeatmapReportProps> = ({
                               justifyContent: "center",
                               cursor: val > 0 ? "pointer" : "default",
                             }}
-                            onDoubleClick={() => val > 0 && handleCellDoubleClick(month)}
+                            {...(val > 0 ? bindDoubleTap(() => handleCellDoubleClick(month)) : {})}
                             title={val > 0 ? t('Double-click to view transactions') : undefined}
                           >
                             {val > 0 ? formatCurrency(val, currency) : "—"}

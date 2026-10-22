@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import { useDoubleTap } from "@/hooks/use-double-tap";
 import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartTooltip } from "@/components/ui/chart-tooltip";
@@ -164,7 +165,11 @@ const MerchantScatterReport: React.FC<MerchantScatterReportProps> = ({
     );
   }, [data]);
 
-  const handleDoubleClick = (point: ScatterPoint) => {
+  const bindDoubleTap = useDoubleTap();
+  const lastPoint = useRef<ScatterPoint | null>(null);
+
+  const handleDoubleClick = (point: ScatterPoint | null) => {
+    if (!point) return;
     const accountIds = getDbFilterArray(filters.accountIds) ?? [];
 
     let categoryIds: number[] | undefined;
@@ -255,7 +260,11 @@ const MerchantScatterReport: React.FC<MerchantScatterReportProps> = ({
         </div>
       </CardHeader>
       <CardContent>
-        <div className="h-[420px]">
+        <div
+          className="h-[420px] touch-manipulation"
+          onClickCapture={() => { lastPoint.current = null; }}
+          {...bindDoubleTap(() => handleDoubleClick(lastPoint.current))}
+        >
           <ResponsiveContainer width="100%" height="100%">
             <ScatterChart margin={{ top: 10, right: 30, bottom: 20, left: 20 }}>
               <CartesianGrid strokeDasharray="3 3" />
@@ -294,7 +303,7 @@ const MerchantScatterReport: React.FC<MerchantScatterReportProps> = ({
                     data={clusterData}
                     fill={color}
                     fillOpacity={0.75}
-                    onDoubleClick={(point) => handleDoubleClick(point as ScatterPoint)}
+                    onClick={(point) => { lastPoint.current = point as ScatterPoint; }}
                   />
                 ) : null,
               )}

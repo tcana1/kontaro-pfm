@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useDateFnsLocale } from "@/lib/date-fns-locale";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useDoubleTap } from "@/hooks/use-double-tap";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartTooltip } from "@/components/ui/chart-tooltip";
 import { Switch } from "@/components/ui/switch";
@@ -23,7 +24,7 @@ import {
 import { CategoryGroup, Category, Transaction } from "@shared/schema";
 import { computeSpendingTrends, ChartDataEntry } from "./spending-trends-utils";
 import { cn } from "@/lib/utils";
-import { openTransactionDrilldown, parseMonthString } from "@/utils/drilldown-utils";
+import { openTransactionDrilldown, extractMonthFromDate } from "@/utils/drilldown-utils";
 import { getDbFilterArray } from "@/lib/report-filters";
 import { ChartLoadingState, ChartEmptyState } from "./chart-states";
 
@@ -45,6 +46,7 @@ const SpendingTrendsReport: React.FC<SpendingTrendsReportProps> = ({
   const dateLocale = useDateFnsLocale();
   const { currency, categories, categoryGroups, locale: userLocale, dateFormat } = useFinance();
   const isMobile = useIsMobile();
+  const bindDoubleTap = useDoubleTap();
   const [reportData, setReportData] = useState<ChartDataEntry[]>([]);
   const [drilldownId, setDrilldownId] = useState<number | null>(null);
   const [drilldownName, setDrilldownName] = useState<string | null>(null);
@@ -237,9 +239,8 @@ const SpendingTrendsReport: React.FC<SpendingTrendsReportProps> = ({
   };
 
   // Handle double-click on table cells for drilldown
-  const handleCellDoubleClick = (monthString: string, categoryKey: string) => {
-    const month = parseMonthString(monthString);
-    if (!month) return;
+  const handleCellDoubleClick = (monthDate: Date, categoryKey: string) => {
+    const month = extractMonthFromDate(monthDate);
 
     // Find the category ID from the spending data
     const categoryData = spendingData.find((d: any) => d.label === categoryKey);
@@ -280,9 +281,8 @@ const SpendingTrendsReport: React.FC<SpendingTrendsReportProps> = ({
   };
 
   // Handle double-click on Total column for drilldown (all categories for that month)
-  const handleTotalColumnDoubleClick = (monthString: string) => {
-    const month = parseMonthString(monthString);
-    if (!month) return;
+  const handleTotalColumnDoubleClick = (monthDate: Date) => {
+    const month = extractMonthFromDate(monthDate);
 
     const accountIds = getDbFilterArray(filters.accountIds) ?? [];
 
@@ -646,9 +646,9 @@ const SpendingTrendsReport: React.FC<SpendingTrendsReportProps> = ({
                                     col: colIndex,
                                   })
                                 }
-                                onDoubleClick={() => month[key] && month[key] > 0 && handleCellDoubleClick(month.month, key)}
+                                {...(month[key] && month[key] > 0 ? bindDoubleTap(() => handleCellDoubleClick(month.date, key)) : {})}
                                 className={cn(
-                                  "text-right py-2 px-2 transition-colors relative",
+                                  "text-right py-2 px-2 transition-colors relative touch-manipulation",
                                   month[key] && month[key] > 0 && "cursor-pointer hover:bg-gray-300 dark:hover:bg-blue-900/20",
                                   hoveredCell?.row === rowIndex &&
                                     "bg-gray-100 dark:bg-gray-200",
@@ -683,9 +683,9 @@ const SpendingTrendsReport: React.FC<SpendingTrendsReportProps> = ({
                                 col: barSeries.length,
                               })
                             }
-                            onDoubleClick={() => monthTotal > 0 && handleTotalColumnDoubleClick(month.month)}
+                            {...(monthTotal > 0 ? bindDoubleTap(() => handleTotalColumnDoubleClick(month.date)) : {})}
                             className={cn(
-                              "text-right py-2 px-2 font-bold transition-colors",
+                              "text-right py-2 px-2 font-bold transition-colors touch-manipulation",
                               monthTotal > 0 && "cursor-pointer hover:bg-gray-300 dark:hover:bg-blue-900/20",
                               hoveredCell?.row === rowIndex &&
                                 "bg-gray-100 dark:bg-gray-700",

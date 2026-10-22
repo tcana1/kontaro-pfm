@@ -75,24 +75,6 @@ export const extractMonthFromDate = (date: Date | string): string => {
 };
 
 /**
- * Parse month string (e.g., "Jan 2024") to YYYY-MM format
- */
-export const parseMonthString = (monthString: string): string | null => {
-  try {
-    // Handle format like "Jan 2024"
-    const date = new Date(monthString + ' 01'); // Add day to make it parseable
-    
-    if (isNaN(date.getTime())) {
-      return null;
-    }
-    
-    return extractMonthFromDate(date);
-  } catch {
-    return null;
-  }
-};
-
-/**
  * Open transaction drilldown in a new tab
  */
 export const openTransactionDrilldown = (params: DrilldownParams) => {

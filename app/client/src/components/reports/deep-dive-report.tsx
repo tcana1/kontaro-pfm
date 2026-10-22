@@ -1,4 +1,5 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useRef } from "react";
+import { useDoubleTap } from "@/hooks/use-double-tap";
 import { useTranslation } from "react-i18next";
 import { useDateFnsLocale } from "@/lib/date-fns-locale";
 import MerchantScatterReport from "@/components/reports/merchant-scatter-report";
@@ -97,6 +98,7 @@ type DistributionRow = {
 
 const HistogramChart: React.FC<{ filters: Filters }> = ({ filters }) => {
   const { t } = useTranslation();
+  const bindDoubleTap = useDoubleTap();
   const { currency } = useFinance();
   const { data, isLoading } = useServiceQuery("get_transaction_size_distribution", {
     rawQuery: true,
@@ -105,8 +107,7 @@ const HistogramChart: React.FC<{ filters: Filters }> = ({ filters }) => {
 
   const rows = Array.isArray(data) ? (data as DistributionRow[]) : [];
 
-  const handleBarDoubleClick = (barData: any) => {
-    if (!barData) return;
+  const handleBarDoubleClick = () => {
     const categoryIds = getDbFilterArray(filters.categoryIds) ?? undefined;
     const accountIds = getDbFilterArray(filters.accountIds) ?? undefined;
     openTransactionDrilldown({
@@ -129,11 +130,11 @@ const HistogramChart: React.FC<{ filters: Filters }> = ({ filters }) => {
         <p className="text-xs text-muted-foreground">{t('How many transactions fall into each spend bucket')}</p>
       </CardHeader>
       <CardContent>
+        <div className="touch-manipulation" {...bindDoubleTap(handleBarDoubleClick)}>
         <ResponsiveContainer width="100%" height={260}>
           <BarChart
             data={rows}
             margin={{ top: 10, right: 20, left: 0, bottom: 5 }}
-            onDoubleClick={handleBarDoubleClick}
           >
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="bucket_label" tick={{ fontSize: 11 }} />
@@ -146,6 +147,7 @@ const HistogramChart: React.FC<{ filters: Filters }> = ({ filters }) => {
             <Bar dataKey="count" fill="#3b82f6" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
+        </div>
         <p className="text-xs text-muted-foreground mt-1 text-right">{t('Double-click to view transactions')}</p>
       </CardContent>
     </Card>
@@ -373,6 +375,8 @@ type TicketRow = {
 
 const TicketSizeChart: React.FC<{ filters: Filters }> = ({ filters }) => {
   const { t } = useTranslation();
+  const bindDoubleTap = useDoubleTap();
+  const lastChartState = useRef<any>(null);
   const dateLocale = useDateFnsLocale();
   const { currency } = useFinance();
   const { data, isLoading } = useServiceQuery("get_ticket_size_stats", {
@@ -429,11 +433,16 @@ const TicketSizeChart: React.FC<{ filters: Filters }> = ({ filters }) => {
         </div>
       </CardHeader>
       <CardContent>
+        <div
+          className="touch-manipulation"
+          onClickCapture={() => { lastChartState.current = null; }}
+          {...bindDoubleTap(() => handleDoubleClick(lastChartState.current))}
+        >
         <ResponsiveContainer width="100%" height={260}>
           <ComposedChart
             data={chartData}
             margin={{ top: 10, right: 20, left: 0, bottom: 5 }}
-            onDoubleClick={handleDoubleClick}
+            onClick={(state: any) => { lastChartState.current = state; }}
           >
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="label" tick={{ fontSize: 11 }} />
@@ -463,6 +472,7 @@ const TicketSizeChart: React.FC<{ filters: Filters }> = ({ filters }) => {
             />
           </ComposedChart>
         </ResponsiveContainer>
+        </div>
         <p className="text-xs text-muted-foreground mt-1 text-right">{t('Double-click to view transactions for that month')}</p>
       </CardContent>
     </Card>

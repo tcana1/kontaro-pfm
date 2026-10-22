@@ -1,4 +1,5 @@
 import React from 'react';
+import { useDoubleTap } from "@/hooks/use-double-tap";
 import { useTranslation } from 'react-i18next';
 import { formatCurrency } from '@/lib/currency-formatter';
 import { useFinance } from '@/contexts/finance-context';
@@ -18,6 +19,7 @@ interface SplitRowProps {
 
 const SplitRow: React.FC<SplitRowProps> = ({ split, onDoubleClick }) => {
   const { t } = useTranslation();
+  const bindDoubleTap = useDoubleTap();
   const { currency } = useFinance();
 
   const isIncome = split.category_is_income;
@@ -26,7 +28,7 @@ const SplitRow: React.FC<SplitRowProps> = ({ split, onDoubleClick }) => {
   const groupName = split.category_group_name;
 
   return (
-    <tr className="border-b border-gray-100 dark:border-gray-800 border-l-2 border-l-violet-300 dark:border-l-violet-600 bg-muted/20" onDoubleClick={onDoubleClick}>
+    <tr className="border-b border-gray-100 dark:border-gray-800 border-l-2 border-l-violet-300 dark:border-l-violet-600 bg-muted/20" {...(onDoubleClick ? bindDoubleTap(onDoubleClick) : {})}>
       {/* Checkbox col — empty */}
       <td className="px-4 text-sm h-[25px]" />
 

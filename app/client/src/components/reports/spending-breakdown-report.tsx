@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from "react";
+import { useDoubleTap } from "@/hooks/use-double-tap";
 import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartTooltip } from "@/components/ui/chart-tooltip";
@@ -28,6 +29,7 @@ const SpendingBreakdownReport: React.FC<SpendingBreakdownReportProps> = ({
   filters,
 }) => {
   const { t } = useTranslation();
+  const bindDoubleTap = useDoubleTap();
   const { currency, categories, categoryGroups, locale: userLocale, dateFormat } = useFinance();
   const [drilldownId, setDrilldownId] = useState<string | null>(null);
   const [drilldownName, setDrilldownName] = useState<string | null>(null);
@@ -243,8 +245,8 @@ const SpendingBreakdownReport: React.FC<SpendingBreakdownReportProps> = ({
                     {spendingData.map((item) => (
                       <tr
                         key={`${item.group_id}-${item.label}`}
-                        className="border-b border-gray-200 dark:border-gray-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer transition-colors"
-                        onDoubleClick={() => handleRowDoubleClick(item)}
+                        className="border-b border-gray-200 dark:border-gray-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer transition-colors touch-manipulation"
+                        {...bindDoubleTap(() => handleRowDoubleClick(item))}
                         title={t('Double-click to view transactions')}
                       >
                         <td className="py-2">

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useDoubleTap } from "@/hooks/use-double-tap";
 import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useServiceQuery } from "@/hooks/useServiceQuery";
@@ -51,6 +52,7 @@ const CategoryRankingReport: React.FC<CategoryRankingReportProps> = ({
   filters,
 }) => {
   const { t } = useTranslation();
+  const bindDoubleTap = useDoubleTap();
   const { currency, categories, locale: userLocale, dateFormat } = useFinance();
 
   // Get locale for number formatting based on currency
@@ -308,8 +310,8 @@ const CategoryRankingReport: React.FC<CategoryRankingReportProps> = ({
                     return (
                       <React.Fragment key={category.category_name}>
                       <tr
-                        className="border-t border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/30 cursor-pointer"
-                        onDoubleClick={() => handleRowDoubleClick(category.category_name)}
+                        className="border-t border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/30 cursor-pointer touch-manipulation"
+                        {...bindDoubleTap(() => handleRowDoubleClick(category.category_name))}
                       >
                         <td className="py-2 px-2 font-medium">
                           <div className="flex items-center gap-1">

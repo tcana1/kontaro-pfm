@@ -1,4 +1,5 @@
 import React from 'react';
+import { useDoubleTap } from "@/hooks/use-double-tap";
 import { useTranslation } from 'react-i18next';
 import { Checkbox } from '@/components/ui/checkbox';
 import { formatCurrency } from '@/lib/currency-formatter';
@@ -263,6 +264,7 @@ const TransactionRowDisplay: React.FC<TransactionRowDisplayProps> = ({
   onReconciledEdit,
 }) => {
   const { t } = useTranslation();
+  const bindDoubleTap = useDoubleTap();
   const { currency, locale, dateFormat } = useFinance();
   const [showStartingBalanceWarning, setShowStartingBalanceWarning] = React.useState(false);
 
@@ -356,7 +358,7 @@ const TransactionRowDisplay: React.FC<TransactionRowDisplayProps> = ({
 
   return (
     <>
-      <tr key={transaction.id} className={rowClassName} onDoubleClick={handleEditClick}>
+      <tr key={transaction.id} className={rowClassName} {...bindDoubleTap(handleEditClick)}>
       <td className="px-4 text-sm h-[25px]">
         <div className="flex items-center gap-2">
           <div 
