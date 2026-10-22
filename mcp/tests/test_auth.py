@@ -231,7 +231,7 @@ async def test_tool_call_uses_jwt_minted_for_its_own_request():
                         "tools/call", i, {"name": "whoami", "arguments": {}},
                     ))
                     assert r.status_code == 200
-                    body = next(l[6:] for l in r.text.splitlines() if l.startswith("data: "))
+                    body = next(line[6:] for line in r.text.splitlines() if line.startswith("data: "))
                     assert "error" not in json.loads(body)
 
     assert len(seen) == 2
