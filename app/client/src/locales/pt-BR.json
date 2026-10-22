@@ -1001,6 +1001,7 @@
   "This is a reconciliation adjustment transaction created on {{date}}.": "Esta é uma transação de ajuste de reconciliação criada em {{date}}.",
   "This is not a credit card account.": "Esta não é uma conta de cartão de crédito.",
   "This is the default Income group and cannot be changed": "Este é o grupo de Receita padrão e não pode ser alterado",
+  "This Month": "Este Mês",
   "This tag is associated with {{count}} transaction{{plural}}. It will be removed from all of them._one": "Esta tag está associada a {{count}} transação{{plural}}. Ela será removida dela.",
   "This tag is associated with {{count}} transaction{{plural}}. It will be removed from all of them._many": "Esta tag está associada a {{count}} transações{{plural}}. Ela será removida de todas elas.",
   "This tag is associated with {{count}} transaction{{plural}}. It will be removed from all of them._other": "Esta tag está associada a {{count}} transações{{plural}}. Ela será removida de todas elas.",

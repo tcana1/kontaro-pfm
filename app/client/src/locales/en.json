@@ -957,6 +957,7 @@
   "This is a reconciliation adjustment transaction created on {{date}}.": "",
   "This is not a credit card account.": "",
   "This is the default Income group and cannot be changed": "",
+  "This Month": "",
   "This tag is associated with {{count}} transaction{{plural}}. It will be removed from all of them._one": "",
   "This tag is associated with {{count}} transaction{{plural}}. It will be removed from all of them._other": "",
   "This tag is not associated with any transactions.": "",

@@ -30,6 +30,12 @@ const DatePresetButtons: React.FC<DatePresetButtonsProps> = ({
 
     return [
       {
+        label: t('This Month'),
+        value: 'this_month',
+        startDate: new Date(currentYear, currentMonth, 1),
+        endDate: new Date(currentYear, currentMonth, now.getDate())
+      },
+      {
         label: t('Last Month'),
         value: 'last_month',
         startDate: new Date(currentYear, currentMonth - 1, 1),
