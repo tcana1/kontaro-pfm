@@ -107,6 +107,15 @@ server {
         add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' http: https: wss:; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';" always;
     }
 
+    # OAuth discovery probes from MCP clients must 404. Without this they reach the
+    # SPA fallback below, which answers 200 text/html for any unknown path — the
+    # client reads that as "an OAuth server lives here" and dies parsing it as JSON.
+    # GoTrue's /auth/v1/.well-known/jwks.json is unaffected: nginx picks the longest
+    # matching prefix, and that path starts with /auth/v1/, not /.well-known/.
+    location /.well-known/ {
+        return 404;
+    }
+
     # SPA fallback — exact-match locations above take priority.
     location / {
         try_files $uri $uri/ /index.html;
