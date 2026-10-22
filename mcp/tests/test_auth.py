@@ -4,6 +4,8 @@ Imports server.py after setting required env vars so the module-level
 SUPABASE_JWT_SECRET check passes without a real database or MCP broker.
 """
 import hashlib
+import itertools
+import json
 import os
 from unittest.mock import patch
 
@@ -14,7 +16,7 @@ from httpx import ASGITransport, AsyncClient
 # Must be set before importing server (module-level env check)
 os.environ.setdefault("SUPABASE_JWT_SECRET", "test-secret-not-for-production")
 
-from server import _ApiKeyMiddleware, _current_jwt, _mint_jwt  # noqa: E402
+from server import _ApiKeyMiddleware, _current_jwt, _mint_jwt, app, mcp  # noqa: E402
 
 _JWT_SECRET = "test-secret-not-for-production"
 _TEST_KEY = "pfm-test-api-key-abc123"
@@ -180,3 +182,58 @@ async def test_key_hash_used_for_db_lookup():
     # The function receives the raw key — hashing happens inside _resolve_user_id_sync.
     # Here we verify the middleware passes the raw key to the resolver unchanged.
     assert seen_args[0] == _TEST_KEY
+
+
+# ── Full stack: tool calls must use their own request's JWT ───────────────────
+
+@pytest.mark.asyncio
+async def test_tool_call_uses_jwt_minted_for_its_own_request():
+    """A stateful MCP session runs tools with the JWT minted at `initialize`, so every
+    tool call fails with 'JWT expired' once that token is older than 10 minutes."""
+    minted = itertools.count(1)
+    seen: list[str] = []
+
+    async def _fake_rpc(func, body=None):
+        seen.append(_current_jwt.get())
+        return {}
+
+    headers = {
+        "x-api-key": _TEST_KEY,
+        "accept": "application/json, text/event-stream",
+        "content-type": "application/json",
+    }
+
+    def _rpc_msg(method, id=None, params=None):
+        msg = {"jsonrpc": "2.0", "method": method, "params": params or {}}
+        if id is not None:
+            msg["id"] = id
+        return msg
+
+    with (
+        patch("server._resolve_user_id_sync", side_effect=_fake_resolver),
+        patch("server._mint_jwt", side_effect=lambda uid: f"jwt-{next(minted)}"),
+        patch("server._rpc", _fake_rpc),
+    ):
+        async with mcp.session_manager.run():
+            transport = ASGITransport(app=app)
+            async with AsyncClient(transport=transport, base_url="http://localhost:8000") as client:
+                init = await client.post("/mcp", headers=headers, json=_rpc_msg(
+                    "initialize", 1,
+                    {"protocolVersion": "2025-03-26", "capabilities": {},
+                     "clientInfo": {"name": "t", "version": "0"}},
+                ))
+                assert init.status_code == 200
+                if sid := init.headers.get("mcp-session-id"):
+                    headers["mcp-session-id"] = sid
+                await client.post("/mcp", headers=headers, json=_rpc_msg("notifications/initialized"))
+                for i in (2, 3):
+                    r = await client.post("/mcp", headers=headers, json=_rpc_msg(
+                        "tools/call", i, {"name": "whoami", "arguments": {}},
+                    ))
+                    assert r.status_code == 200
+                    body = next(l[6:] for l in r.text.splitlines() if l.startswith("data: "))
+                    assert "error" not in json.loads(body)
+
+    assert len(seen) == 2
+    assert len(set(seen)) == 2, f"tool calls reused one token: {seen}"
+    assert "jwt-1" not in seen, "tool call used the JWT minted for `initialize`"

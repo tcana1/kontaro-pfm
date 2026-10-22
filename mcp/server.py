@@ -137,7 +137,9 @@ Monthly analysis workflow (the monthly_analysis prompt has the full text)
    save_insight_run(month, report), then patch_analysis_state(...) for new learnings.
 """
 
-mcp = FastMCP("pfm-finance", instructions=_INSTRUCTIONS)
+# Stateless: a stateful session runs tools in a task whose context was copied at
+# `initialize`, so _current_jwt would stay frozen at that request's 10-minute token.
+mcp = FastMCP("pfm-finance", instructions=_INSTRUCTIONS, stateless_http=True)
 
 
 @mcp.tool()
