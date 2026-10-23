@@ -27,7 +27,7 @@ import DateRangeFilter from '@/components/transactions/date-range-filter';
 import { useTransactionUrlFilters } from '@/hooks/use-transaction-url-filters';
 import { CreateTransactionCommand, UpdateTransactionCommand } from '@/lib/commands/transaction-commands';
 import { useHistoryContext } from '@/contexts/history-context';
-import BatchEditDialog from '@/components/transactions/batch-edit-dialog';
+import TransactionEditDialog from '@/components/transactions/transaction-edit-dialog';
 import BatchTagDialog from '@/components/transactions/batch-tag-dialog';
 import CollapseDialog from '@/components/transactions/collapse-dialog';
 import ReconciliationMismatchDialog from '@/components/transactions/reconciliation-mismatch-dialog';
@@ -728,11 +728,17 @@ const TransactionsPageContent: React.FC<TransactionsPageContentProps> = ({ accou
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Batch Edit Dialog */}
-      <BatchEditDialog
+      {/* Edit Dialog for the current selection (one transaction or many) */}
+      <TransactionEditDialog
         isOpen={isBatchEditDialogOpen}
+        transactions={selectedTransactions}
+        isSaving={isSaving}
+        onSave={(original, data) => {
+          if (original) {
+            handleSaveEditedTransaction(original, data, () => handleBatchEditClose(true, []));
+          }
+        }}
         onClose={handleBatchEditClose}
-        selectedTransactions={selectedTransactions}
         onFailedTransactions={handleBatchEditFailed}
       />
 

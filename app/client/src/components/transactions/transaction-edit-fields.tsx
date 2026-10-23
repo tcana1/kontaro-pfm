@@ -1,6 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -220,3 +221,56 @@ const TransactionEditFields: React.FC<TransactionEditFieldsProps> = ({
 };
 
 export default TransactionEditFields;
+
+interface EditDialogShellProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  title: string;
+  children: React.ReactNode;
+}
+
+export const EditDialogShell: React.FC<EditDialogShellProps> = ({ open, onOpenChange, title, children }) => (
+  <Dialog open={open} onOpenChange={onOpenChange}>
+    <DialogContent
+      className="sm:max-w-md max-h-[90dvh] overflow-y-auto"
+      onOpenAutoFocus={(e) => e.preventDefault()}
+    >
+      <DialogHeader>
+        <DialogTitle>{title}</DialogTitle>
+      </DialogHeader>
+      {children}
+    </DialogContent>
+  </Dialog>
+);
+
+interface EditDialogFooterProps {
+  onCancel: () => void;
+  cancelDisabled?: boolean;
+  submitContent: React.ReactNode;
+  submitDisabled?: boolean;
+  submitType?: 'button' | 'submit';
+  onSubmit?: () => void;
+  submitRef?: React.Ref<HTMLButtonElement>;
+}
+
+export const EditDialogFooter: React.FC<EditDialogFooterProps> = ({
+  onCancel,
+  cancelDisabled,
+  submitContent,
+  submitDisabled,
+  submitType = 'button',
+  onSubmit,
+  submitRef,
+}) => {
+  const { t } = useTranslation();
+  return (
+    <DialogFooter className="flex gap-2 sm:gap-0 sm:justify-between justify-between items-stretch sm:items-center pt-4">
+      <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={onCancel} disabled={cancelDisabled}>
+        {t('Cancel')}
+      </Button>
+      <Button ref={submitRef} type={submitType} className="w-full sm:w-auto" onClick={onSubmit} disabled={submitDisabled}>
+        {submitContent}
+      </Button>
+    </DialogFooter>
+  );
+};

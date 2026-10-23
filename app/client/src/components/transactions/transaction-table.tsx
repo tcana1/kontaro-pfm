@@ -782,9 +782,10 @@ const handleDismissMatch = async (matchCandidateId: number) => {
 
       {/* Mobile edit/add dialog */}
       <TransactionEditDialog
-        transaction={mobileEditTransaction as any}
+        isOpen={!!mobileEditTransaction || (isMobile && isAddingNewTransaction)}
+        transactions={mobileEditTransaction ? [mobileEditTransaction as unknown as Transaction] : []}
         isAdding={isMobile && isAddingNewTransaction}
-        onSave={(data) => {
+        onSave={(_original, data) => {
           if (isAddingNewTransaction) {
             onSaveNewTransaction(data);
           } else if (mobileEditTransaction) {
@@ -797,7 +798,7 @@ const handleDismissMatch = async (matchCandidateId: number) => {
             });
           }
         }}
-        onCancel={() => {
+        onClose={() => {
           if (isAddingNewTransaction) {
             onCancelNewTransaction();
           } else {

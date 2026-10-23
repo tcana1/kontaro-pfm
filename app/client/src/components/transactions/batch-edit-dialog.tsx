@@ -1,12 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useHistoryContext } from "@/contexts/history-context";
@@ -15,7 +9,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { BatchUpdateTransactionCommand } from "@/lib/commands/transaction-commands";
 import { Transaction } from "@shared/schema";
 import { BatchEditValidator, type BatchEditRestrictions } from '@/utils/batch-edit-validator';
-import TransactionEditFields, { type FieldRestriction } from './transaction-edit-fields';
+import TransactionEditFields, { EditDialogShell, EditDialogFooter, type FieldRestriction } from './transaction-edit-fields';
 
 // Import standard form components for modal
 import { Info } from 'lucide-react';
@@ -244,13 +238,11 @@ const BatchEditDialog: React.FC<BatchEditDialogProps> = ({
   }, [isOpen, isLoading]);
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleCancel}>
-      <DialogContent className="sm:max-w-md max-h-[90dvh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>
-            {t('Edit {{count}} Transactions', { count: selectedTransactions.length })}
-          </DialogTitle>
-        </DialogHeader>
+    <EditDialogShell
+      open={isOpen}
+      onOpenChange={handleCancel}
+      title={t('Edit {{count}} Transactions', { count: selectedTransactions.length })}
+    >
 
         {restrictions && !restrictions.canProceed ? (
           // Not Allowed Dialog for linked transactions
@@ -337,18 +329,17 @@ const BatchEditDialog: React.FC<BatchEditDialogProps> = ({
           onNotesChange={(value) => handleFieldChange('notes', value)}
         />
 
-            <DialogFooter className="flex gap-2 sm:gap-0 sm:justify-between justify-between items-stretch sm:items-center pt-4">
-              <Button variant="outline" className="w-full sm:w-auto" onClick={handleCancel} disabled={isLoading}>
-                {t('Cancel')}
-              </Button>
-              <Button ref={updateButtonRef} className="w-full sm:w-auto" onClick={handleSubmit} disabled={isLoading}>
-                {isLoading ? t('Updating...') : t('Update {{count}} Transactions', { count: selectedTransactions.length })}
-              </Button>
-            </DialogFooter>
+            <EditDialogFooter
+              onCancel={handleCancel}
+              cancelDisabled={isLoading}
+              submitRef={updateButtonRef}
+              onSubmit={handleSubmit}
+              submitDisabled={isLoading}
+              submitContent={isLoading ? t('Updating...') : t('Update {{count}} Transactions', { count: selectedTransactions.length })}
+            />
           </>
         )}
-      </DialogContent>
-    </Dialog>
+    </EditDialogShell>
   );
 };
 
