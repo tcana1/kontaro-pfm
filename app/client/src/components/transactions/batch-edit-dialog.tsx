@@ -251,7 +251,7 @@ const BatchEditDialog: React.FC<BatchEditDialogProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleCancel}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[90dvh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {t('Edit {{count}} Transactions', { count: selectedTransactions.length })}
@@ -325,7 +325,7 @@ const BatchEditDialog: React.FC<BatchEditDialogProps> = ({
 
         <div className="space-y-4 py-4">
           {/* Date and Status on same row */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="date">{t('Date')}</Label>
               <Popover>
@@ -378,7 +378,7 @@ const BatchEditDialog: React.FC<BatchEditDialogProps> = ({
             <RadioGroup
               value={formData.is_ignored}
               onValueChange={(value) => handleFieldChange('is_ignored', value)}
-              className="flex gap-6"
+              className="flex flex-wrap gap-x-6 gap-y-2"
             >
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="no-change" id="ignore-no-change" />
@@ -448,11 +448,11 @@ const BatchEditDialog: React.FC<BatchEditDialogProps> = ({
           </div>
         </div>
 
-            <DialogFooter className="flex sm:justify-between justify-between items-center pt-4">
-              <Button variant="outline" onClick={handleCancel} disabled={isLoading}>
+            <DialogFooter className="flex gap-2 sm:gap-0 sm:justify-between justify-between items-stretch sm:items-center pt-4">
+              <Button variant="outline" className="w-full sm:w-auto" onClick={handleCancel} disabled={isLoading}>
                 {t('Cancel')}
               </Button>
-              <Button ref={updateButtonRef} onClick={handleSubmit} disabled={isLoading}>
+              <Button ref={updateButtonRef} className="w-full sm:w-auto" onClick={handleSubmit} disabled={isLoading}>
                 {isLoading ? t('Updating...') : t('Update {{count}} Transactions', { count: selectedTransactions.length })}
               </Button>
             </DialogFooter>
