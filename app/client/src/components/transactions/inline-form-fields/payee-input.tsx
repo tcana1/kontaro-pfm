@@ -183,7 +183,7 @@ const PayeeInput: React.FC<PayeeInputProps> = ({
 
   // Sync external value changes (e.g. form reset)
   useEffect(() => {
-    setInputValue(value);
+    setInputValue(prev => (prev.trim() === value ? prev : value));
   }, [value]);
 
   // Register field reference
@@ -298,6 +298,9 @@ const PayeeInput: React.FC<PayeeInputProps> = ({
     const newValue = e.target.value;
     setInputValue(newValue);
 
+    // Typing invalidates an earlier dropdown pick, and the form must hold the typed text even if no blur fires before Save (touch devices)
+    selectionMadeRef.current = false;
+
     // If user was on a transfer/payment and starts typing, undo the transfer side-effects
     const isCurrentlyTransferPayment = transferAndPaymentOptions.some(opt => opt.label === value);
     if (isCurrentlyTransferPayment && onFieldLock) {
@@ -308,6 +311,8 @@ const PayeeInput: React.FC<PayeeInputProps> = ({
       if (onTypeChange) onTypeChange('expense');
       onChange('');
     }
+
+    if (newValue.trim()) onChange(newValue.trim());
 
     if (!isOpen) openDropdown();
   };
