@@ -7,7 +7,9 @@ import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
-import { ChevronDown, X, Plus, Check, Loader2 } from 'lucide-react';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { ChevronDown, X, Plus, Check, Loader2, Calendar as CalendarIcon } from 'lucide-react';
 import { getTodayISO } from '@/lib/date-utils';
 import { cn } from '@/lib/utils';
 import { useServiceQuery } from '@/hooks/useServiceQuery';
@@ -16,7 +18,6 @@ import { CacheUtils } from '@/lib/cacheUtils';
 import PayeeInput from './inline-form-fields/payee-input';
 import CategorySelect from './inline-form-fields/category-select';
 import AmountInput from './inline-form-fields/amount-input';
-import NotesInput from './inline-form-fields/notes-input';
 import AccountSelect from './inline-form-fields/account-select';
 import type { Transaction, Tag as TagType } from '@shared/schema';
 import { tKey } from '@/lib/i18n-keys';
@@ -181,22 +182,25 @@ const MobileEditSheet: React.FC<Props> = ({ transaction, isAdding, onSave, onCan
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           {/* Date — native picker for mobile */}
-          <div>
-            <label className="text-xs font-medium text-gray-500 mb-1 block">{t('Date')}</label>
-            <input
-              type="date"
-              value={watch('paymentDate')}
-              onChange={(e) => setValue('paymentDate', e.target.value, { shouldDirty: true })}
-              className="w-full h-9 px-3 py-1 text-sm border border-input rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-            />
+          <div className="space-y-2">
+            <Label>{t('Date')}</Label>
+            <div className="relative">
+              <CalendarIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <input
+                type="date"
+                value={watch('paymentDate')}
+                onChange={(e) => setValue('paymentDate', e.target.value, { shouldDirty: true })}
+                className="w-full h-10 pl-9 pr-3 py-2 text-sm border border-input rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              />
+            </div>
             {errors.paymentDate && (
               <p className="text-xs text-red-500 mt-1">{te(errors.paymentDate?.message)}</p>
             )}
           </div>
 
           {/* Payee */}
-          <div>
-            <label className="text-xs font-medium text-gray-500 mb-1 block">{t('Payee')}</label>
+          <div className="space-y-2">
+            <Label>{t('Payee')}</Label>
             <PayeeInput
               value={watch('payee')}
               onChange={(v) => setValue('payee', v, { shouldDirty: true })}
@@ -214,8 +218,8 @@ const MobileEditSheet: React.FC<Props> = ({ transaction, isAdding, onSave, onCan
           </div>
 
           {/* Category */}
-          <div>
-            <label className="text-xs font-medium text-gray-500 mb-1 block">{t('Category')}</label>
+          <div className="space-y-2">
+            <Label>{t('Category')}</Label>
             <CategorySelect
               value={watch('categoryId') || ''}
               onChange={(v) => setValue('categoryId', v, { shouldDirty: true })}
@@ -226,8 +230,8 @@ const MobileEditSheet: React.FC<Props> = ({ transaction, isAdding, onSave, onCan
           </div>
 
           {/* Amount */}
-          <div>
-            <label className="text-xs font-medium text-gray-500 mb-1 block">{t('Amount')}</label>
+          <div className="space-y-2">
+            <Label>{t('Amount')}</Label>
             <AmountInput
               value={watch('amount')}
               onChange={(v) => setValue('amount', v, { shouldDirty: true })}
@@ -236,18 +240,20 @@ const MobileEditSheet: React.FC<Props> = ({ transaction, isAdding, onSave, onCan
           </div>
 
           {/* Notes */}
-          <div>
-            <label className="text-xs font-medium text-gray-500 mb-1 block">{t('Notes')}</label>
-            <NotesInput
+          <div className="space-y-2">
+            <Label>{t('Notes')}</Label>
+            <Textarea
               value={watch('notes') || ''}
-              onChange={(v) => setValue('notes', v, { shouldDirty: true })}
+              onChange={(e) => setValue('notes', e.target.value, { shouldDirty: true })}
+              placeholder={t('Additional notes...')}
+              rows={3}
             />
           </div>
 
           {/* Tag (editing only — no tag on new transactions) */}
           {!isAdding && transaction && (
-            <div>
-              <label className="text-xs font-medium text-gray-500 mb-1 block">{t('Tag')}</label>
+            <div className="space-y-2">
+              <Label>{t('Tag')}</Label>
               {!tagOpen ? (
                 <button
                   type="button"
@@ -359,8 +365,8 @@ const MobileEditSheet: React.FC<Props> = ({ transaction, isAdding, onSave, onCan
           )}
 
           {/* Account */}
-          <div>
-            <label className="text-xs font-medium text-gray-500 mb-1 block">{t('Account')}</label>
+          <div className="space-y-2">
+            <Label>{t('Account')}</Label>
             <AccountSelect
               value={watch('accountId')}
               onChange={(v) => setValue('accountId', v, { shouldDirty: true })}
