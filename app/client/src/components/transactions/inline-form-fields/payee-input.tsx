@@ -20,6 +20,7 @@ interface PayeeInputProps {
   onFieldLock?: (field: string, locked: boolean) => void; // For locking category and type fields
   disabled?: boolean;
   title?: string;
+  size?: 'sm' | 'default';
   autoOpen?: boolean;
   onKeyDown?: (event: React.KeyboardEvent) => boolean;
   onAdvance?: () => void;
@@ -41,6 +42,7 @@ const PayeeInput: React.FC<PayeeInputProps> = ({
   onFieldLock,
   disabled = false,
   title,
+  size = 'sm',
   autoOpen = false,
   onKeyDown,
   onAdvance,
@@ -451,7 +453,8 @@ const PayeeInput: React.FC<PayeeInputProps> = ({
         disabled={disabled}
         title={title}
         className={cn(
-          'flex h-7 w-full rounded-md border border-input bg-background px-2 py-1 text-sm',
+          'flex w-full rounded-md border border-input bg-background text-sm',
+          size === 'default' ? 'h-10 px-3 py-2' : 'h-7 px-2 py-1',
           'placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
           'disabled:cursor-not-allowed disabled:opacity-50',
           error ? 'border-red-500' : ''

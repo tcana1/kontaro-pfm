@@ -8,6 +8,7 @@ interface AmountInputProps {
   error?: string;
   disabled?: boolean;
   title?: string;
+  size?: 'sm' | 'default';
   onKeyDown?: (event: React.KeyboardEvent) => boolean;
   registerFieldRef?: (fieldName: string, element: HTMLElement | null) => void;
   fieldName?: string;
@@ -20,6 +21,7 @@ const AmountInput: React.FC<AmountInputProps> = ({
   error,
   disabled,
   title,
+  size = 'sm',
   onKeyDown,
   registerFieldRef,
   fieldName,
@@ -38,6 +40,7 @@ const AmountInput: React.FC<AmountInputProps> = ({
       onKeyDown={onKeyDown}
       disabled={disabled}
       title={title}
+      className={size === 'default' ? '!h-10 !px-3 !py-2' : undefined}
       error={error}
       data-testid="currency-input"
     />

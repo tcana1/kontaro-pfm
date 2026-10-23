@@ -8,28 +8,18 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
 import { useHistoryContext } from "@/contexts/history-context";
 import { useAuth } from "@/contexts/auth-context";
-import { useFinance } from "@/contexts/finance-context";
 import { useQueryClient } from "@tanstack/react-query";
 import { BatchUpdateTransactionCommand } from "@/lib/commands/transaction-commands";
 import { Transaction } from "@shared/schema";
 import { BatchEditValidator, type BatchEditRestrictions } from '@/utils/batch-edit-validator';
-import CategorySelect from './inline-form-fields/category-select';
+import TransactionEditFields, { type FieldRestriction } from './transaction-edit-fields';
 
 // Import standard form components for modal
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Separator } from '@/components/ui/separator';
-import { CalendarIcon, Info } from 'lucide-react';
-import { formatDateForDisplay, localDateString } from '@/lib/date-utils';
-import { cn } from '@/lib/utils';
+import { Info } from 'lucide-react';
+import { localDateString } from '@/lib/date-utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface BatchEditDialogProps {
@@ -70,12 +60,16 @@ const BatchEditDialog: React.FC<BatchEditDialogProps> = ({
   const { toast } = useToast();
   const { execute } = useHistoryContext();
   const { user } = useAuth();
-  const { categories, accounts, locale, dateFormat } = useFinance();
   const queryClient = useQueryClient();
 
   const handleFieldChange = (field: keyof BatchEditFormData, value: string | Date | boolean | null) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
+
+  const restrictionFor = (field: string): FieldRestriction => ({
+    disabled: restrictions?.disabledFields.has(field),
+    reason: restrictions?.restrictionReasons.has(field) ? t(restrictions.restrictionReasons.get(field)!) : undefined,
+  });
 
   const handleCategorySelectionComplete = () => {
     // Move focus to Update button for smooth Enter+Enter workflow
@@ -323,130 +317,25 @@ const BatchEditDialog: React.FC<BatchEditDialogProps> = ({
           </div>
         )}
 
-        <div className="space-y-4 py-4">
-          {/* Date and Status on same row */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="date">{t('Date')}</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      restrictions?.disabledFields.has('payment_date') && "opacity-50 cursor-not-allowed"
-                    )}
-                    disabled={restrictions?.disabledFields.has('payment_date')}
-                    title={restrictions?.restrictionReasons.has('payment_date') ? t(restrictions.restrictionReasons.get('payment_date')!) : undefined}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {formData.date ? (
-                      formatDateForDisplay(formData.date, locale, dateFormat)
-                    ) : (
-                      <span className="text-muted-foreground">{t('Pick a date')}</span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={formData.date || undefined}
-                    onSelect={(date) => handleFieldChange('date', date || null)}
-                    initialFocus
-                    disabled={restrictions?.disabledFields.has('payment_date')}
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="status">{t('Status')}</Label>
-              <Select value={formData.status_id} onValueChange={(value) => handleFieldChange('status_id', value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder={t('Select status...')} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="1">{t('Pending')}</SelectItem>
-                  <SelectItem value="2">{t('Cleared')}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {/* Ignore Section */}
-          <div className="space-y-2">
-            <Label className="text-sm font-medium">{t('Ignore Flag')}</Label>
-            <RadioGroup
-              value={formData.is_ignored}
-              onValueChange={(value) => handleFieldChange('is_ignored', value)}
-              className="flex flex-wrap gap-x-6 gap-y-2"
-            >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="no-change" id="ignore-no-change" />
-                <Label htmlFor="ignore-no-change" className="text-sm">{t('No change')}</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="true" id="ignore-true" />
-                <Label htmlFor="ignore-true" className="text-sm">{t('Ignore')}</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="false" id="ignore-false" />
-                <Label htmlFor="ignore-false" className="text-sm">{t('Show')}</Label>
-              </div>
-            </RadioGroup>
-          </div>
-
-          {/* Category full width */}
-          <div className="space-y-2">
-            <Label htmlFor="category">{t('Category')}</Label>
-            <CategorySelect
-              value={formData.category_id || 'no-change'}
-              onChange={(value) => handleFieldChange('category_id', value)}
-              disabled={restrictions?.disabledFields.has('category_id')}
-              title={restrictions?.restrictionReasons.has('category_id') ? t(restrictions.restrictionReasons.get('category_id')!) : undefined}
-              size="default"
-              showNoChangeOption={true}
-              onSelectionComplete={handleCategorySelectionComplete}
-            />
-          </div>
-
-          {/* Account full width */}
-          <div className="space-y-2">
-            <Label htmlFor="account">{t('Account')}</Label>
-            <Select
-              value={formData.account_id}
-              onValueChange={(value) => handleFieldChange('account_id', value)}
-              disabled={restrictions?.disabledFields.has('account_id')}
-            >
-              <SelectTrigger
-                className={cn(
-                  restrictions?.disabledFields.has('account_id') && "opacity-50 cursor-not-allowed"
-                )}
-                title={restrictions?.restrictionReasons.has('account_id') ? t(restrictions.restrictionReasons.get('account_id')!) : undefined}
-              >
-                <SelectValue placeholder={t('Select account...')} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="no-change">{t('No account change')}</SelectItem>
-                {accounts?.sort((a, b) => a.name.localeCompare(b.name)).map((account) => (
-                  <SelectItem key={account.id} value={account.id.toString()}>
-                    {account.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Notes full width */}
-          <div className="space-y-2">
-            <Label htmlFor="notes">{t('Notes')}</Label>
-            <Textarea
-              value={formData.notes}
-              onChange={(e) => handleFieldChange('notes', e.target.value)}
-              placeholder={t('Add notes...')}
-              rows={3}
-            />
-          </div>
-        </div>
+        <TransactionEditFields
+          mode="batch"
+          date={formData.date}
+          onDateChange={(date) => handleFieldChange('date', date)}
+          dateRestriction={restrictionFor('payment_date')}
+          statusId={formData.status_id}
+          onStatusChange={(value) => handleFieldChange('status_id', value)}
+          isIgnored={formData.is_ignored}
+          onIsIgnoredChange={(value) => handleFieldChange('is_ignored', value)}
+          categoryId={formData.category_id || 'no-change'}
+          onCategoryChange={(value) => handleFieldChange('category_id', value)}
+          categoryRestriction={restrictionFor('category_id')}
+          onCategorySelectionComplete={handleCategorySelectionComplete}
+          accountId={formData.account_id}
+          onAccountChange={(value) => handleFieldChange('account_id', value)}
+          accountRestriction={restrictionFor('account_id')}
+          notes={formData.notes}
+          onNotesChange={(value) => handleFieldChange('notes', value)}
+        />
 
             <DialogFooter className="flex gap-2 sm:gap-0 sm:justify-between justify-between items-stretch sm:items-center pt-4">
               <Button variant="outline" className="w-full sm:w-auto" onClick={handleCancel} disabled={isLoading}>

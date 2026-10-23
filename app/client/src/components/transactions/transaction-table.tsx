@@ -57,7 +57,7 @@ import TransactionSkeleton from './transaction-skeleton';
 import ReconciliationWarningDialog from './reconciliation-warning-dialog';
 import { ActiveFilters } from "./transaction-filter";
 import MobileTransactionCard from './mobile-transaction-card';
-import MobileEditSheet from './mobile-edit-sheet';
+import TransactionEditDialog from './transaction-edit-dialog';
 import MobileTagSheet from './mobile-tag-sheet';
 import TagDetail from '@/components/tags/tag-detail';
 import { MergeTransactionDialog, type MatchCandidate } from './merge-transaction-dialog';
@@ -780,8 +780,8 @@ const handleDismissMatch = async (matchCandidateId: number) => {
         onDismiss={handleDismissMatch}
       />
 
-      {/* Mobile edit/add sheet */}
-      <MobileEditSheet
+      {/* Mobile edit/add dialog */}
+      <TransactionEditDialog
         transaction={mobileEditTransaction as any}
         isAdding={isMobile && isAddingNewTransaction}
         onSave={(data) => {
