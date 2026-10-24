@@ -103,8 +103,8 @@ function ExpandableSection({ label, items, total, currency, totalSuffix, showIns
             <div key={i} className="flex items-center justify-between gap-2">
               <span className="text-xs text-gray-500 dark:text-gray-400 truncate">{item.payee}</span>
               <span className="text-xs tabular-nums text-gray-500 dark:text-gray-400 flex-shrink-0">
-                {showProgress && item.remaining != null && item.installment_total > 0
-                  ? <><span className="text-gray-400 dark:text-gray-500 mr-1.5">{item.remaining}/{item.installment_total}</span>{formatCurrency(item.monthly_amount, currency, 0)}</>
+                {showProgress && item.paid != null && item.installment_total > 0
+                  ? <><span className="text-gray-400 dark:text-gray-500 mr-1.5">{item.paid}/{item.installment_total}</span>{formatCurrency(item.monthly_amount, currency, 0)}</>
                   : showInstallmentCount && item.installment_total > 0
                   ? `${item.installment_total}x ${formatCurrency(item.monthly_amount, currency, 0)}`
                   : formatCurrency(item.monthly_amount, currency, 0)
