@@ -247,7 +247,7 @@ const PayeeInput: React.FC<PayeeInputProps> = ({
       onFieldLock('category', false);
       onFieldLock('type', false);
     }
-    if (onCategoryChange) onCategoryChange(defaultCategoryId ?? 0);
+    if (onCategoryChange && defaultCategoryId != null) onCategoryChange(defaultCategoryId);
     closeDropdown();
     if (onAdvance) onAdvance();
   }, [onChange, onFieldLock, onCategoryChange, onAdvance, closeDropdown]);

@@ -6,7 +6,7 @@ import { describe, it, expect, vi } from 'vitest';
 
 vi.mock('@/contexts/finance-context', () => ({ useFinance: () => ({ accounts: [] }) }));
 vi.mock('@/services/supabase-service', () => ({
-  supabaseService: { getPayees: vi.fn().mockResolvedValue([{ name: 'Existing Shop', default_category_id: 3 }]) },
+  supabaseService: { getPayees: vi.fn().mockResolvedValue([{ name: 'Existing Shop', default_category_id: 3 }, { name: 'Plain Shop', default_category_id: null }]) },
 }));
 import PayeeInput from '@/components/transactions/inline-form-fields/payee-input';
 
@@ -39,5 +39,22 @@ describe('PayeeInput commit', () => {
     await user.clear(input); await user.type(input, 'Brand New 2');
     await user.click(screen.getByText('Save'));
     expect(saved).toBe('Brand New 2');
+  });
+
+  it('applies the payee default category only when one exists', async () => {
+    const user = userEvent.setup();
+    const onCategoryChange = vi.fn();
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <PayeeInput value="Old Name" onChange={() => {}} onToAccountIdChange={() => {}} onCategoryChange={onCategoryChange} />
+      </QueryClientProvider>
+    );
+    const input = screen.getByRole('textbox');
+    await user.clear(input); await user.type(input, 'Plain');
+    await user.click(await screen.findByText('Plain Shop'));
+    expect(onCategoryChange).not.toHaveBeenCalled();
+    await user.clear(input); await user.type(input, 'Exist');
+    await user.click(await screen.findByText('Existing Shop'));
+    expect(onCategoryChange).toHaveBeenCalledWith(3);
   });
 });
