@@ -391,7 +391,7 @@ const TransactionRowDisplay: React.FC<TransactionRowDisplayProps> = ({
       <td className="px-1 text-sm h-[25px] w-[15px]">
         <TagPickerCell transaction={transaction} onOpenDetail={(id, name, color) => setDetailTag({ id, name, color })} />
       </td>
-      <td className="px-4 text-sm h-[25px] whitespace-nowrap">{formattedDate}</td>
+      <td className="px-2 text-sm h-[25px] whitespace-nowrap overflow-hidden">{formattedDate}</td>
       <td className="px-4 text-sm h-[25px] max-w-[180px]">
         <div
           className="truncate"
