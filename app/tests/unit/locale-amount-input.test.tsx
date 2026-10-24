@@ -387,4 +387,34 @@ describe('LocaleAmountInput with react-number-format', () => {
       expect(input).toHaveAttribute('placeholder', 'Enter amount');
     });
   });
+
+  describe('Fixed decimals when not focused', () => {
+    beforeEach(() => {
+      mockUseFinance.mockReturnValue({
+        currency: 'BRL',
+        accounts: [],
+        categories: [],
+        categoryGroups: [],
+        settings: null,
+      });
+    });
+
+    it('shows full decimals for existing values until the field is focused', async () => {
+      const user = userEvent.setup();
+      render(<LocaleAmountInput {...defaultProps} value="5.4" />);
+      const input = screen.getByTestId('locale-amount-input');
+      expect(input).toHaveValue('5,40');
+
+      await user.click(input);
+      expect(input).toHaveValue('5,4');
+
+      await user.tab();
+      expect(input).toHaveValue('5,40');
+    });
+
+    it('shows whole values with decimals', () => {
+      render(<LocaleAmountInput {...defaultProps} value="350" />);
+      expect(screen.getByTestId('locale-amount-input')).toHaveValue('350,00');
+    });
+  });
 });

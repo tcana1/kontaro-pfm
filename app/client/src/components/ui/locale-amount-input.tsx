@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { NumericFormat, NumberFormatValues, SourceInfo } from 'react-number-format';
 import { useFinance } from '@/contexts/finance-context';
 import { type CurrencyCode } from '@/lib/currency-formatter';
@@ -114,6 +114,7 @@ export const LocaleAmountInput = React.forwardRef<HTMLInputElement, LocaleAmount
 }, ref) => {
   const { currency } = useFinance();
   const localeConfig = getLocaleConfig(currency);
+  const [isFocused, setIsFocused] = useState(false);
 
   /**
    * Generate locale-aware placeholder
@@ -166,7 +167,11 @@ export const LocaleAmountInput = React.forwardRef<HTMLInputElement, LocaleAmount
         id={id}
         value={getDisplayValue()}
         onValueChange={handleValueChange}
-        onBlur={onBlur}
+        onFocus={() => setIsFocused(true)}
+        onBlur={() => {
+          setIsFocused(false);
+          onBlur?.();
+        }}
         onKeyDown={onKeyDown}
         disabled={disabled}
         placeholder={getLocalePlaceholder()}
@@ -176,7 +181,7 @@ export const LocaleAmountInput = React.forwardRef<HTMLInputElement, LocaleAmount
         inputMode="decimal"
         allowNegative={true}
         allowLeadingZeros={false}
-        fixedDecimalScale={false}
+        fixedDecimalScale={!isFocused}
         className={`flex h-7 w-full rounded-md border border-input bg-background px-2 py-1 text-right text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${hasError ? "border-red-500" : ""} ${className}`}
         data-testid={dataTestId}
       />
