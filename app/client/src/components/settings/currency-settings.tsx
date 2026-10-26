@@ -9,7 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { CurrencyCode, getCurrencyOptions, getDefaultLocaleForCurrency } from '@/lib/currency-formatter';
+import { CurrencyCode, formatCurrency, getCurrencyOptions, getDefaultLocaleForCurrency } from '@/lib/currency-formatter';
+import { formatDateForDisplay } from '@/lib/date-utils';
 
 const formSchema = z.object({
   currency: z.string(),
@@ -22,17 +23,14 @@ const CurrencySettings: React.FC = () => {
   const { currency, setCurrency, locale, setLocale, dateFormat, setDateFormat } = useFinance();
   const { toast } = useToast();
   const currencyOptions = getCurrencyOptions();
-  const currentYear = new Date().getFullYear();
 
-  const dateFormatOptions = [
-    { value: 'DD/MM/YYYY', label: `DD/MM/YYYY (25/12/${currentYear})` },
-    { value: 'MM/DD/YYYY', label: `MM/DD/YYYY (12/25/${currentYear})` },
-    { value: 'YYYY/MM/DD', label: `YYYY/MM/DD (${currentYear}/12/25)` },
-    { value: 'DD/MMM/YYYY', label: `DD/MMM/YYYY (25/Dec/${currentYear})` },
-    { value: 'DD-MM-YYYY', label: `DD-MM-YYYY (25-12-${currentYear})` },
-    { value: 'MM-DD-YYYY', label: `MM-DD-YYYY (12-25-${currentYear})` },
-    { value: 'YYYY-MM-DD', label: `YYYY-MM-DD (${currentYear}-12-25)` },
-    { value: 'DD-MMM-YYYY', label: `DD-MMM-YYYY (25-Dec-${currentYear})` },
+  // ISO string, never a Date: `new Date('YYYY-MM-DD')` parses as UTC midnight and
+  // reading it back with the local getters lands on the previous day west of UTC.
+  const sampleDate = `${new Date().getFullYear()}-12-25`;
+
+  const dateFormatValues = [
+    'DD/MM/YYYY', 'MM/DD/YYYY', 'YYYY/MM/DD', 'DD/MMM/YYYY',
+    'DD-MM-YYYY', 'MM-DD-YYYY', 'YYYY-MM-DD', 'DD-MMM-YYYY',
   ];
 
   const localeOptions = [
@@ -46,6 +44,9 @@ const CurrencySettings: React.FC = () => {
     { value: 'pt-BR', label: t('Portuguese (Brazil)') },
     { value: 'ja-JP', label: t('Japanese (Japan)') },
     { value: 'zh-CN', label: t('Chinese (Simplified)') },
+    { value: 'en-CA', label: t('English (Canada)') },
+    { value: 'en-AU', label: t('English (Australia)') },
+    { value: 'en-IN', label: t('English (India)') },
   ];
 
   // Default form values
@@ -78,25 +79,12 @@ const CurrencySettings: React.FC = () => {
     });
   };
 
-  // Format preview date according to selected format
-  const formatPreviewDate = (date: Date, format: string) => {
-    const day = date.getDate().toString().padStart(2, '0');
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const monthName = date.toLocaleString(form.watch('locale'), { month: 'short' });
-    const year = date.getFullYear();
-
-    switch (format) {
-      case 'DD/MM/YYYY': return `${day}/${month}/${year}`;
-      case 'MM/DD/YYYY': return `${month}/${day}/${year}`;
-      case 'YYYY/MM/DD': return `${year}/${month}/${day}`;
-      case 'DD/MMM/YYYY': return `${day}/${monthName}/${year}`;
-      case 'DD-MM-YYYY': return `${day}-${month}-${year}`;
-      case 'MM-DD-YYYY': return `${month}-${day}-${year}`;
-      case 'YYYY-MM-DD': return `${year}-${month}-${day}`;
-      case 'DD-MMM-YYYY': return `${day}-${monthName}-${year}`;
-      default: return `${day}/${month}/${year}`;
-    }
-  };
+  // Both the dropdown labels and the preview go through the same formatters the rest
+  // of the app uses, so the sample can never drift from what the user will actually see.
+  const dateFormatOptions = dateFormatValues.map(value => ({
+    value,
+    label: `${value} (${formatDateForDisplay(sampleDate, form.watch('locale'), value)})`,
+  }));
 
   return (
     <div className="space-y-6">
@@ -204,18 +192,13 @@ const CurrencySettings: React.FC = () => {
             <div>
               <p className="text-xs text-gray-500 dark:text-gray-400">{t('Number Format')}</p>
               <p className="text-base font-medium text-primary mt-0.5">
-                {new Intl.NumberFormat(form.watch('locale'), {
-                  style: 'currency',
-                  currency: form.watch('currency'),
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                }).format(1234.56)}
+                {formatCurrency(1234.56, form.watch('currency') as CurrencyCode)}
               </p>
             </div>
             <div>
               <p className="text-xs text-gray-500 dark:text-gray-400">{t('Date Format')}</p>
               <p className="text-base font-medium mt-0.5">
-                {formatPreviewDate(new Date('2023-12-24'), form.watch('dateFormat'))}
+                {formatDateForDisplay(sampleDate, form.watch('locale'), form.watch('dateFormat'))}
               </p>
             </div>
           </div>
