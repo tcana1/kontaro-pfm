@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useDateFnsLocale } from '@/lib/date-fns-locale';
-import { format, parseISO } from 'date-fns';
 import { Eye, EyeOff, Edit, Trash2, Tag, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import CheckCircleEmpty from '@/assets/icons/check-circle-empty.svg?react';
@@ -10,7 +8,7 @@ import LockFilled from '@/assets/icons/lock-filled.svg?react';
 import { formatCurrency } from '@/lib/currency-formatter';
 import { useFinance } from '@/contexts/finance-context';
 import { useLongPress } from '@/hooks/use-long-press';
-import { toISODateString, getTodayISO } from '@/lib/date-utils';
+import { toISODateString, getTodayISO, formatDateForDisplay } from '@/lib/date-utils';
 import { cn } from '@/lib/utils';
 
 interface MobileTx {
@@ -70,9 +68,8 @@ const MobileTransactionCard: React.FC<Props> = ({
   onSelect,
 }) => {
   const { t } = useTranslation();
-  const dateLocale = useDateFnsLocale();
   const [expanded, setExpanded] = useState(false);
-  const { currency } = useFinance();
+  const { currency, locale, dateFormat } = useFinance();
 
   const longPressHandlers = useLongPress(() => onLongPress?.());
 
@@ -109,15 +106,7 @@ const MobileTransactionCard: React.FC<Props> = ({
     ? 'border-l-gray-300 dark:border-l-gray-600'
     : 'border-l-transparent';
 
-  let dateStr = '';
-  try {
-    const d = typeof transaction.payment_date === 'string'
-      ? parseISO(transaction.payment_date)
-      : new Date(transaction.payment_date as Date);
-    dateStr = format(d, 'PP', { locale: dateLocale });
-  } catch {
-    dateStr = String(transaction.payment_date);
-  }
+  const dateStr = formatDateForDisplay(transaction.payment_date, locale, dateFormat);
 
   const linkedName = transaction.to_account_name || (isTransfer ? t('Unknown account') : t('External account'));
 
