@@ -35,6 +35,7 @@ export function useAccountBalance(accountId?: number) {
         clearedBalance: parseFloat(row.cleared_balance || '0'),
         pendingBalance: parseFloat(row.pending_balance || '0'),
         totalBalance: parseFloat(row.total_balance || '0'),
+        projectedBalance: parseFloat(row.projected_balance || '0'),
       })) || [];
     },
     enabled: (accountId === undefined || accountId > 0) && !!user && !authLoading, // Valid account IDs (or all) and only once authenticated

@@ -48,7 +48,7 @@ const TransactionStatusBar: React.FC<TransactionStatusBarProps> = ({
   isPaginationDisabled = false,
 }) => {
   const { t } = useTranslation();
-  const { currency, accounts, locale } = useFinance();
+  const { currency, accounts, locale, showInstallmentProjection } = useFinance();
   const [showReconcileInput, setShowReconcileInput] = useState(false);
   const [bankBalance, setBankBalance] = useState<string>('');
 
@@ -93,6 +93,10 @@ const TransactionStatusBar: React.FC<TransactionStatusBarProps> = ({
     { label: t('Total'), value: accountBalance?.totalBalance },
   ];
 
+  // Kept out of the Cleared + Pending = Total identity on purpose: that is the
+  // number reconciliation compares against, and a projection is not an actual.
+  const projected = showInstallmentProjection ? (accountBalance?.projectedBalance ?? 0) : 0;
+
   return (
     <div className="mt-auto sticky bottom-0 z-10 flex items-center justify-between gap-4 px-4 py-1.5 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 shadow-[0_-1px_3px_rgba(0,0,0,0.06)] text-sm">
       <div className="flex items-center gap-x-4 gap-y-1 min-w-0 flex-wrap">
@@ -115,6 +119,23 @@ const TransactionStatusBar: React.FC<TransactionStatusBarProps> = ({
                 </div>
               </React.Fragment>
             ))}
+
+            {balancesReady && projected !== 0 && account && (
+              <>
+                <span className="text-gray-300 dark:text-gray-600">|</span>
+                <div
+                  className="flex items-baseline gap-1.5"
+                  title={t('Includes {{amount}} of installments the open bill should charge but the bank has not reported yet', {
+                    amount: formatCurrency(Math.abs(projected), currency),
+                  })}
+                >
+                  <span className="text-xs text-gray-500 dark:text-gray-400">{t('Projected')}</span>
+                  <span className={cn('font-semibold tabular-nums opacity-70', getBalanceTextColor(account.type_id))}>
+                    {formatCurrency((accountBalance?.totalBalance ?? 0) + projected, currency)}
+                  </span>
+                </div>
+              </>
+            )}
           </div>
         )}
 
