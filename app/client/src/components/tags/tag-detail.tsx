@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { supabaseService } from '@/services/supabase-service';
-import { formatCurrency } from '@/lib/currency-formatter';
+import { useMoney } from '@/hooks/useMoney';
 import { formatDateForDisplay } from '@/lib/date-utils';
 import { useFinance } from '@/contexts/finance-context';
 
@@ -16,7 +16,8 @@ interface TagDetailProps {
 
 const TagDetail: React.FC<TagDetailProps> = ({ tagId, tagName, tagColor, onClose }) => {
   const { t } = useTranslation();
-  const { currency, locale, dateFormat } = useFinance();
+  const { locale, dateFormat } = useFinance();
+  const money = useMoney();
 
   const { data: summary, isLoading } = useQuery({
     queryKey: ['tagSummary', tagId],
@@ -59,7 +60,7 @@ const TagDetail: React.FC<TagDetailProps> = ({ tagId, tagName, tagColor, onClose
               <div className="space-y-1">
                 <p className="text-xs text-muted-foreground uppercase tracking-wide">{t('Total spent')}</p>
                 <p className="text-2xl font-semibold tabular-nums">
-                  {formatCurrency(summary.total, currency, 0)}
+                  {money(summary.total, { precision: 0 })}
                 </p>
               </div>
               <div className="space-y-1">
@@ -102,7 +103,7 @@ const TagDetail: React.FC<TagDetailProps> = ({ tagId, tagName, tagColor, onClose
                             </span>
                           </div>
                           <span className="font-medium tabular-nums flex-shrink-0 ml-2">
-                            {formatCurrency(item.total, currency, 0)}
+                            {money(item.total, { precision: 0 })}
                           </span>
                         </div>
                         <div className="h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
@@ -147,7 +148,7 @@ const TagDetail: React.FC<TagDetailProps> = ({ tagId, tagName, tagColor, onClose
                             <p className="text-xs text-muted-foreground truncate">{dateStr} · {cat}</p>
                           </div>
                           <span className={`text-sm tabular-nums flex-shrink-0 ${isPositive ? 'text-green-600 dark:text-green-400' : ''}`}>
-                            {amt < 0 ? '-' : ''}{formatCurrency(Math.abs(amt), currency)}
+                            {amt < 0 ? '-' : ''}{money(Math.abs(amt))}
                           </span>
                         </div>
                       );

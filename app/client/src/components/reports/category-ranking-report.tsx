@@ -4,7 +4,8 @@ import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useServiceQuery } from "@/hooks/useServiceQuery";
 import { useFinance } from "@/contexts/finance-context";
-import { formatCurrency, roundDown } from "@/lib/currency-formatter";
+import { roundDown } from "@/lib/currency-formatter";
+import { useMoney } from '@/hooks/useMoney';
 import { formatDateRangeLabel, localDateString } from "@/lib/date-utils";
 import { openTransactionDrilldown } from "@/utils/drilldown-utils";
 import { supabaseService } from "@/services/supabase-service";
@@ -53,26 +54,8 @@ const CategoryRankingReport: React.FC<CategoryRankingReportProps> = ({
 }) => {
   const { t } = useTranslation();
   const bindDoubleTap = useDoubleTap();
-  const { currency, categories, locale: userLocale, dateFormat } = useFinance();
-
-  // Get locale for number formatting based on currency
-  const getLocaleForCurrency = (currencyCode: string) => {
-    const localeMap: Record<string, string> = {
-      USD: 'en-US',
-      EUR: 'de-DE', 
-      GBP: 'en-GB',
-      JPY: 'ja-JP',
-      CNY: 'zh-CN',
-      BRL: 'pt-BR',
-      MXN: 'es-MX',
-      CAD: 'en-CA',
-      AUD: 'en-AU',
-      INR: 'en-IN',
-    };
-    return localeMap[currencyCode] || 'en-US';
-  };
-  
-  const locale = getLocaleForCurrency(currency);
+  const { categories, locale, dateFormat } = useFinance();
+  const money = useMoney();
   const [rankingData, setRankingData] = useState<CategoryRankingData[]>([]);
   const [availableYears, setAvailableYears] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<string>('recent_year');
@@ -84,7 +67,7 @@ const CategoryRankingReport: React.FC<CategoryRankingReportProps> = ({
 
   // Format date range for display
   const dateRangeText = (() => {
-    return formatDateRangeLabel(filters.startDate, filters.endDate, userLocale, dateFormat, t('All Time'));
+    return formatDateRangeLabel(filters.startDate, filters.endDate, locale, dateFormat, t('All Time'));
   })();
 
   // Fetch ranking data
@@ -342,10 +325,10 @@ const CategoryRankingReport: React.FC<CategoryRankingReportProps> = ({
                                 {yearData ? yearData.rank : '-'}
                               </td>
                               <td className="text-center py-2 px-1">
-                                {yearData ? formatCurrency(roundDown(yearData.total), currency, 0) : '-'}
+                                {yearData ? money(roundDown(yearData.total), { precision: 0 }) : '-'}
                               </td>
                               <td className="text-center py-2 px-1">
-                                {yearData ? formatCurrency(roundDown(yearData.average_monthly), currency, 0) : '-'}
+                                {yearData ? money(roundDown(yearData.average_monthly), { precision: 0 }) : '-'}
                               </td>
                               <td className="text-center py-2 px-1">
                                 {yearData ? `${yearData.percentage.toLocaleString(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%` : '-'}
@@ -387,7 +370,7 @@ const CategoryRankingReport: React.FC<CategoryRankingReportProps> = ({
                                           <span className="font-medium truncate">{m.payee}</span>
                                         </span>
                                         <span className="text-muted-foreground shrink-0">
-                                          {formatCurrency(m.total_spent, currency, 0)}
+                                          {money(m.total_spent, { precision: 0 })}
                                           <span className="text-muted-foreground/60"> · {m.visit_count}×</span>
                                         </span>
                                       </div>

@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useServiceQuery } from "@/hooks/useServiceQuery";
 import { useFinance } from "@/contexts/finance-context";
 import { localDateString } from "@/lib/date-utils";
-import { formatCurrency } from "@/lib/currency-formatter";
+import { useMoney } from '@/hooks/useMoney';
 import { openTransactionDrilldown } from "@/utils/drilldown-utils";
 import { getDbFilterArray } from "@/lib/report-filters";
 import { ChartLoadingState, ChartEmptyState } from "./chart-states";
@@ -68,7 +68,8 @@ const WeekdayHeatmapReport: React.FC<WeekdayHeatmapReportProps> = ({
 }) => {
   const { t } = useTranslation();
   const bindDoubleTap = useDoubleTap();
-  const { currency, categories, categoryGroups, locale } = useFinance();
+  const { categories, categoryGroups, locale } = useFinance();
+  const money = useMoney();
   const [heatmapData, setHeatmapData] = useState<
     Map<string, Map<number, CellValues>>
   >(new Map());
@@ -224,7 +225,7 @@ const WeekdayHeatmapReport: React.FC<WeekdayHeatmapReportProps> = ({
                             {...(val > 0 ? bindDoubleTap(() => handleCellDoubleClick(month)) : {})}
                             title={val > 0 ? t('Double-click to view transactions') : undefined}
                           >
-                            {val > 0 ? formatCurrency(val, currency) : "—"}
+                            {val > 0 ? money(val) : "—"}
                           </div>
                         </td>
                       );

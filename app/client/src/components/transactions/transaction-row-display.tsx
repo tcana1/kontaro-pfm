@@ -2,7 +2,7 @@ import React from 'react';
 import { useDoubleTap } from "@/hooks/use-double-tap";
 import { useTranslation } from 'react-i18next';
 import { Checkbox } from '@/components/ui/checkbox';
-import { formatCurrency } from '@/lib/currency-formatter';
+import { useMoney } from '@/hooks/useMoney';
 import { formatDateForDisplay, toISODateString, getTodayISO } from '@/lib/date-utils';
 import { useFinance } from '@/contexts/finance-context';
 import { Button } from '@/components/ui/button';
@@ -265,7 +265,8 @@ const TransactionRowDisplay: React.FC<TransactionRowDisplayProps> = ({
 }) => {
   const { t } = useTranslation();
   const bindDoubleTap = useDoubleTap();
-  const { currency, locale, dateFormat } = useFinance();
+  const { locale, dateFormat } = useFinance();
+  const money = useMoney();
   const [showStartingBalanceWarning, setShowStartingBalanceWarning] = React.useState(false);
 
   const isIncome = transaction.category_is_income;
@@ -475,8 +476,8 @@ const TransactionRowDisplay: React.FC<TransactionRowDisplayProps> = ({
         className={`px-4 text-sm whitespace-nowrap ${isSpecialTransaction ? "text-muted-foreground" : parseFloat(displayAmount) > 0 ? "text-green-600 dark:text-green-400" : "text-foreground"} text-right`}
       >
         {parseFloat(displayAmount) < 0
-          ? `-${formatCurrency(Math.abs(parseFloat(displayAmount)), currency)}`
-          : formatCurrency(parseFloat(displayAmount), currency)}
+          ? `-${money(Math.abs(parseFloat(displayAmount)))}`
+          : money(parseFloat(displayAmount))}
       </td>
       <td className="hidden md:table-cell px-4 text-sm h-[25px] max-w-[100px] text-center w-full">
         {transaction.is_installment &&

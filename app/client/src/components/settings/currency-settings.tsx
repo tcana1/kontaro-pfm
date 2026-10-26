@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { CurrencyCode, formatCurrency, getCurrencyOptions, getDefaultLocaleForCurrency } from '@/lib/currency-formatter';
+import { CurrencyCode, formatMoney, getCurrencyOptions, getDefaultLocaleForCurrency } from '@/lib/currency-formatter';
 import { formatDateForDisplay } from '@/lib/date-utils';
 
 const formSchema = z.object({
@@ -192,7 +192,7 @@ const CurrencySettings: React.FC = () => {
             <div>
               <p className="text-xs text-gray-500 dark:text-gray-400">{t('Number Format')}</p>
               <p className="text-base font-medium text-primary mt-0.5">
-                {formatCurrency(1234.56, form.watch('currency') as CurrencyCode)}
+                {formatMoney(1234.56, { currency: form.watch('currency') as CurrencyCode, locale: form.watch('locale') })}
               </p>
             </div>
             <div>

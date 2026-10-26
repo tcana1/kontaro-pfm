@@ -6,7 +6,7 @@ import MobileTransactionFab from '@/components/transactions/mobile-transaction-f
 import MobileReconcileSheet from '@/components/transactions/mobile-reconcile-sheet';
 import { cn } from '@/lib/utils';
 import { useSingleAccountBalance } from '@/hooks/useAccountBalance';
-import { formatCurrency } from '@/lib/currency-formatter';
+import { useMoney } from '@/hooks/useMoney';
 import { formatDateForDisplay } from '@/lib/date-utils';
 import TransactionTable from '@/components/transactions/transaction-table';
 import TransactionStatusBar from '@/components/transactions/transaction-status-bar';
@@ -47,7 +47,8 @@ const TransactionsPageContent: React.FC<TransactionsPageContentProps> = ({ accou
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { user } = useAuth();
-  const { categories, accounts, currency, locale, dateFormat } = useFinance();
+  const { categories, accounts, locale, dateFormat } = useFinance();
+  const money = useMoney();
   const { undo, redo, discardAffecting: discardHistoryAffecting, canUndo, canRedo, execute: originalExecute } = useHistoryContext();
 
   // Default filters - preserve account filter for account-specific pages
@@ -488,7 +489,7 @@ const TransactionsPageContent: React.FC<TransactionsPageContentProps> = ({ accou
       {selectedTransactions.length > 0 ? (
         <div className="flex items-center gap-1 ml-auto flex-shrink-0">
           <span className="text-xs font-medium text-blue-600 dark:text-blue-400 tabular-nums">
-            {selectedTransactions.length} · {formatCurrency(Math.abs(selectedTotal), currency)}
+            {selectedTransactions.length} · {money(Math.abs(selectedTotal))}
           </span>
           <button
             onClick={() => setSelectedTransactions([])}
@@ -507,7 +508,7 @@ const TransactionsPageContent: React.FC<TransactionsPageContentProps> = ({ accou
         </button>
       ) : null}
     </div>
-  ), [currentAccount?.name, accountId, mobileBalanceOpen, selectedTransactions.length, selectedTotal, currency, mobileReconcileOpen]);
+  ), [currentAccount?.name, accountId, mobileBalanceOpen, selectedTransactions.length, selectedTotal, money, mobileReconcileOpen]);
 
   useMobilePanel(() => {
     if (!accountId || !mobileBalanceOpen) return null;
@@ -523,7 +524,7 @@ const TransactionsPageContent: React.FC<TransactionsPageContentProps> = ({ accou
             <span className="text-xs text-gray-500 dark:text-gray-400">{label}</span>
             {value !== undefined ? (
               <span className={cn('text-sm font-semibold tabular-nums', balanceColor)}>
-                {formatCurrency(value, currency)}
+                {money(value)}
               </span>
             ) : (
               <div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
@@ -532,7 +533,7 @@ const TransactionsPageContent: React.FC<TransactionsPageContentProps> = ({ accou
         ))}
       </div>
     );
-  }, [accountId, mobileBalanceOpen, mobileBalance, balanceColor, currency]);
+  }, [accountId, mobileBalanceOpen, mobileBalance, balanceColor, money]);
 
   return (
     <div className="flex-1 flex flex-col space-y-4 bg-gray-100 dark:bg-gray-900 relative">
@@ -768,7 +769,6 @@ const TransactionsPageContent: React.FC<TransactionsPageContentProps> = ({ accou
           bankBalance={mismatchData.bank_balance}
           difference={mismatchData.difference}
           transactionCount={mismatchData.transaction_count}
-          currency={currency || 'USD'}
         />
       )}
 

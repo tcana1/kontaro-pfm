@@ -1,7 +1,22 @@
 export type CurrencyCode = 'USD' | 'EUR' | 'GBP' | 'JPY' | 'CNY' | 'BRL' | 'MXN' | 'CAD' | 'AUD' | 'INR';
 
+export type CurrencyDisplay = 'symbol' | 'narrowSymbol' | 'code' | 'name' | 'none';
+
+export interface MoneyFormat {
+  currency: CurrencyCode;
+  // The user's locale drives punctuation (1.234,56 vs 1,234.56). It is deliberately
+  // required: deriving it from the currency is what made the locale setting a no-op
+  // outside this file for so long.
+  locale: string;
+  currencyDisplay?: CurrencyDisplay;
+  hideCents?: boolean;
+  // Wins over hideCents, for places that always show whole units (charts, summaries).
+  precision?: number;
+}
+
 interface CurrencyConfig {
   symbol: string;
+  // Only a suggestion offered when the user picks a currency in Settings.
   locale: string;
   precision: number;
 }
@@ -33,17 +48,19 @@ export const roundDown = (
     : Math.ceil(amount * factor) / factor;
 }
 
-export const formatCurrency = (
-  amount: number,
-  currencyCode: CurrencyCode = 'USD',
-  precisionOverride?: number
-): string => {
-  const config = currencyConfigs[currencyCode] || currencyConfigs.USD;
-  const precision = precisionOverride ?? config.precision;
-  
-  return new Intl.NumberFormat(config.locale, {
-    style: 'currency',
-    currency: currencyCode,
+export const formatMoney = (amount: number, fmt: MoneyFormat): string => {
+  const config = currencyConfigs[fmt.currency] || currencyConfigs.USD;
+  const precision = fmt.precision ?? (fmt.hideCents ? 0 : config.precision);
+  const display = fmt.currencyDisplay ?? 'symbol';
+
+  // 'none' is not an Intl currencyDisplay value, so drop to a plain decimal and
+  // let Intl keep the locale's grouping and separators.
+  const options: Intl.NumberFormatOptions = display === 'none'
+    ? { style: 'decimal' }
+    : { style: 'currency', currency: fmt.currency, currencyDisplay: display };
+
+  return new Intl.NumberFormat(fmt.locale, {
+    ...options,
     minimumFractionDigits: precision,
     maximumFractionDigits: precision,
   }).format(amount);

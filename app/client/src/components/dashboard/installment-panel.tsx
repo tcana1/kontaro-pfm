@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDateFnsLocale } from '@/lib/date-fns-locale';
@@ -9,8 +8,7 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, LabelList,
 } from 'recharts';
 import { useServiceQuery } from '@/hooks/useServiceQuery';
-import { useFinance } from '@/contexts/finance-context';
-import { formatCurrency } from '@/lib/currency-formatter';
+import { useMoney } from '@/hooks/useMoney';
 import { ChartTooltip } from '@/components/ui/chart-tooltip';
 
 interface Props {
@@ -69,13 +67,13 @@ interface ExpandableSectionProps {
   label: string;
   items: Array<MonthEvent & { remaining?: number; paid?: number }>;
   total: number;
-  currency: any;
   totalSuffix?: string;
   showInstallmentCount?: boolean;
   showProgress?: boolean;
 }
 
-function ExpandableSection({ label, items, total, currency, totalSuffix, showInstallmentCount, showProgress }: ExpandableSectionProps) {
+function ExpandableSection({ label, items, total, totalSuffix, showInstallmentCount, showProgress }: ExpandableSectionProps) {
+  const money = useMoney();
   const [open, setOpen] = useState(false);
   if (items.length === 0) return null;
 
@@ -93,7 +91,7 @@ function ExpandableSection({ label, items, total, currency, totalSuffix, showIns
           <span className="text-xs font-medium text-gray-500 dark:text-gray-400">{label}</span>
         </div>
         <span className="text-sm tabular-nums text-gray-700 dark:text-gray-300">
-          {formatCurrency(total, currency, 0)}{totalSuffix}
+          {money(total, { precision: 0 })}{totalSuffix}
         </span>
       </button>
 
@@ -104,10 +102,10 @@ function ExpandableSection({ label, items, total, currency, totalSuffix, showIns
               <span className="text-xs text-gray-500 dark:text-gray-400 truncate">{item.payee}</span>
               <span className="text-xs tabular-nums text-gray-500 dark:text-gray-400 flex-shrink-0">
                 {showProgress && item.paid != null && item.installment_total > 0
-                  ? <><span className="text-gray-400 dark:text-gray-500 mr-1.5">{item.paid}/{item.installment_total}</span>{formatCurrency(item.monthly_amount, currency, 0)}</>
+                  ? <><span className="text-gray-400 dark:text-gray-500 mr-1.5">{item.paid}/{item.installment_total}</span>{money(item.monthly_amount, { precision: 0 })}</>
                   : showInstallmentCount && item.installment_total > 0
-                  ? `${item.installment_total}x ${formatCurrency(item.monthly_amount, currency, 0)}`
-                  : formatCurrency(item.monthly_amount, currency, 0)
+                  ? `${item.installment_total}x ${money(item.monthly_amount, { precision: 0 })}`
+                  : money(item.monthly_amount, { precision: 0 })
                 }
               </span>
             </div>
@@ -121,7 +119,7 @@ function ExpandableSection({ label, items, total, currency, totalSuffix, showIns
 export default function InstallmentPanel({ selectedMonth }: Props) {
   const { t } = useTranslation();
   const dateLocale = useDateFnsLocale();
-  const { currency } = useFinance();
+  const money = useMoney();
   const monthKey = format(selectedMonth, 'yyyy-MM');
 
   const { data, isLoading } = useServiceQuery<InstallmentData>(
@@ -172,19 +170,18 @@ export default function InstallmentPanel({ selectedMonth }: Props) {
                 items={active}
                 total={totalActive}
                 totalSuffix="/mo"
-                currency={currency}
                 showProgress
               />
             )}
 
-            <ExpandableSection label={t('Ending this month')} items={[...ending].sort((a, b) => b.monthly_amount - a.monthly_amount)} total={totalFreed} currency={currency} showInstallmentCount />
-            <ExpandableSection label={t('Starting this month')} items={[...starting].sort((a, b) => b.monthly_amount - a.monthly_amount)} total={totalNewBurden} currency={currency} showInstallmentCount />
+            <ExpandableSection label={t('Ending this month')} items={[...ending].sort((a, b) => b.monthly_amount - a.monthly_amount)} total={totalFreed} showInstallmentCount />
+            <ExpandableSection label={t('Starting this month')} items={[...starting].sort((a, b) => b.monthly_amount - a.monthly_amount)} total={totalNewBurden} showInstallmentCount />
 
             {(ending.length > 0 || starting.length > 0) && (
               <div className="flex justify-between items-center border-t border-gray-100 dark:border-gray-700 pt-2">
                 <span className="text-xs font-medium text-gray-500 dark:text-gray-400">{t('Net change next month')}</span>
                 <span className={`text-sm font-medium tabular-nums ${netBurdenChange < 0 ? 'text-emerald-600 dark:text-emerald-400' : netBurdenChange > 0 ? 'text-amber-500' : 'text-gray-500'}`}>
-                  {netBurdenChange > 0 ? '+' : ''}{formatCurrency(netBurdenChange, currency, 0)}/mo
+                  {netBurdenChange > 0 ? '+' : ''}{money(netBurdenChange, { precision: 0 })}/mo
                 </span>
               </div>
             )}
@@ -208,7 +205,7 @@ export default function InstallmentPanel({ selectedMonth }: Props) {
                       if (val == null) return null;
                       return (
                         <ChartTooltip className="text-xs px-2 py-1">
-                          {formatCurrency(val, currency, 0)}
+                          {money(val, { precision: 0 })}
                         </ChartTooltip>
                       );
                     }}

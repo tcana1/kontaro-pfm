@@ -18,8 +18,7 @@ import { Label } from '@/components/ui/label';
 import { Plus, Trash2, GitMerge, ChevronUp, ChevronDown, ChevronsUpDown, Palette, Archive, ArchiveRestore, Pencil } from 'lucide-react';
 import { supabaseService } from '@/services/supabase-service';
 import { CacheUtils } from '@/lib/cacheUtils';
-import { formatCurrency } from '@/lib/currency-formatter';
-import { useFinance } from '@/contexts/finance-context';
+import { useMoney } from '@/hooks/useMoney';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import type { Tag } from '@shared/schema';
@@ -74,7 +73,7 @@ function SortIcon({ field, active, dir }: { field: SortField; active: SortField;
 const TagList: React.FC = () => {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
-  const { currency } = useFinance();
+  const money = useMoney();
   const { toast } = useToast();
 
   useMobileHeader(() => (
@@ -457,7 +456,7 @@ const TagList: React.FC = () => {
                           {/* stats inline on mobile only */}
                           <span className="md:hidden text-xs text-muted-foreground tabular-nums">
                             {stats[tag.id]?.count
-                              ? `${stats[tag.id].count} txn${stats[tag.id].count !== 1 ? 's' : ''} · ${formatCurrency(stats[tag.id].total, currency, 0)}`
+                              ? `${stats[tag.id].count} txn${stats[tag.id].count !== 1 ? 's' : ''} · ${money(stats[tag.id].total, { precision: 0 })}`
                               : '—'}
                           </span>
                         </div>
@@ -478,7 +477,7 @@ const TagList: React.FC = () => {
 
                   <td className="hidden md:table-cell px-3 py-1.5 text-right tabular-nums">
                     {stats[tag.id]?.total
-                      ? <span className="font-medium">{formatCurrency(stats[tag.id].total, currency, 0)}</span>
+                      ? <span className="font-medium">{money(stats[tag.id].total, { precision: 0 })}</span>
                       : <span className="text-gray-300 dark:text-gray-600">—</span>}
                   </td>
 

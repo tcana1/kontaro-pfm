@@ -3,7 +3,8 @@ import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useServiceQuery } from "@/hooks/useServiceQuery";
 import { useFinance } from "@/contexts/finance-context";
-import { formatCurrency, roundDown } from "@/lib/currency-formatter";
+import { roundDown } from "@/lib/currency-formatter";
+import { useMoney } from '@/hooks/useMoney';
 import { formatDateRangeLabel, localDateString } from "@/lib/date-utils";
 import { getDbFilterArray } from "@/lib/report-filters";
 import { ChartLoadingState, ChartEmptyState } from "./chart-states";
@@ -47,7 +48,8 @@ const MultiYearIncomeVsExpensesReport: React.FC<MultiYearIncomeVsExpensesReportP
   filters,
 }) => {
   const { t } = useTranslation();
-  const { currency, locale: userLocale, dateFormat } = useFinance();
+  const { locale: userLocale, dateFormat } = useFinance();
+  const money = useMoney();
   const [incomeSummary, setIncomeSummary] = useState<ProcessedItemSummary[]>([]);
   const [expenseSummary, setExpenseSummary] = useState<ProcessedItemSummary[]>([]);
   const [availableYears, setAvailableYears] = useState<string[]>([]);
@@ -198,7 +200,7 @@ const MultiYearIncomeVsExpensesReport: React.FC<MultiYearIncomeVsExpensesReportP
                 <td
                   className={`py-${isGroup ? '2' : '1'} text-right ${availableYears.length > 1 ? 'pr-2' : 'pr-8'} ${index > 0 ? 'border-l-2 border-gray-300 dark:border-gray-600 pl-2' : ''}`}
                 >
-                  {formatCurrency(roundDown(yearAmount), currency, 0)}
+                  {money(roundDown(yearAmount), { precision: 0 })}
                 </td>
                 {availableYears.length > 1 && (
                   <td className={`py-${isGroup ? '2' : '1'} text-right pr-4 text-gray-500`}>
@@ -210,7 +212,7 @@ const MultiYearIncomeVsExpensesReport: React.FC<MultiYearIncomeVsExpensesReportP
           })}
           {availableYears.length > 1 && (
             <td className={`py-${isGroup ? '2' : '1'} text-right border-l-2 border-gray-300 dark:border-gray-600 font-medium pl-2 pr-2`}>
-              {formatCurrency(roundDown(item.totalAmount), currency, 0)}
+              {money(roundDown(item.totalAmount), { precision: 0 })}
             </td>
           )}
           <td className={`py-${isGroup ? '2' : '1'} text-right text-gray-500 ${availableYears.length === 1 ? 'border-l-2 border-gray-300 dark:border-gray-600 pl-2' : ''}`}>
@@ -297,7 +299,7 @@ const MultiYearIncomeVsExpensesReport: React.FC<MultiYearIncomeVsExpensesReportP
                         <td
                           className={`py-2 text-right ${availableYears.length > 1 ? 'pr-2' : 'pr-8'} ${index > 0 ? 'border-l-2 border-gray-300 dark:border-gray-600 pl-2' : ''}`}
                         >
-                          {formatCurrency(roundDown(totalsByYear[year]?.income || 0), currency, 0)}
+                          {money(roundDown(totalsByYear[year]?.income || 0), { precision: 0 })}
                         </td>
                         {availableYears.length > 1 && (
                           <td className="py-2 text-right pr-4 text-gray-500">
@@ -308,7 +310,7 @@ const MultiYearIncomeVsExpensesReport: React.FC<MultiYearIncomeVsExpensesReportP
                     ))}
                     {availableYears.length > 1 && (
                       <td className="py-2 text-right border-l-2 border-gray-300 dark:border-gray-600 font-medium pl-2 pr-2">
-                        {formatCurrency(roundDown(overallTotals.income), currency, 0)}
+                        {money(roundDown(overallTotals.income), { precision: 0 })}
                       </td>
                     )}
                     <td className={`py-2 text-right ${availableYears.length === 1 ? 'border-l-2 border-gray-300 dark:border-gray-600 pl-2' : ''}`}>100%</td>
@@ -330,7 +332,7 @@ const MultiYearIncomeVsExpensesReport: React.FC<MultiYearIncomeVsExpensesReportP
                         <td
                           className={`py-2 text-right ${availableYears.length > 1 ? 'pr-2' : 'pr-8'} ${index > 0 ? 'border-l-2 border-gray-300 dark:border-gray-600 pl-2' : ''}`}
                         >
-                          {formatCurrency(roundDown(totalsByYear[year]?.expenses || 0), currency, 0)}
+                          {money(roundDown(totalsByYear[year]?.expenses || 0), { precision: 0 })}
                         </td>
                         {availableYears.length > 1 && (
                           <td className="py-2 text-right pr-4 text-gray-500">
@@ -341,7 +343,7 @@ const MultiYearIncomeVsExpensesReport: React.FC<MultiYearIncomeVsExpensesReportP
                     ))}
                     {availableYears.length > 1 && (
                       <td className="py-2 text-right border-l-2 border-gray-300 dark:border-gray-600 font-medium pl-2 pr-2">
-                        {formatCurrency(roundDown(overallTotals.expenses), currency, 0)}
+                        {money(roundDown(overallTotals.expenses), { precision: 0 })}
                       </td>
                     )}
                     <td className={`py-2 text-right ${availableYears.length === 1 ? 'border-l-2 border-gray-300 dark:border-gray-600 pl-2' : ''}`}>100%</td>
@@ -360,7 +362,7 @@ const MultiYearIncomeVsExpensesReport: React.FC<MultiYearIncomeVsExpensesReportP
                           <td
                             className={`py-5 text-right ${availableYears.length > 1 ? 'pr-2' : 'pr-8'} ${index > 0 ? 'border-l-2 border-gray-300 dark:border-gray-600 pl-2' : ''} ${netAmount >= 0 ? "text-success" : "text-danger"}`}
                           >
-                            {formatCurrency(roundDown(netAmount), currency, 0)}
+                            {money(roundDown(netAmount), { precision: 0 })}
                           </td>
                           {availableYears.length > 1 && (
                             <td className={`py-5 text-right pr-4 ${netAmount >= 0 ? "text-success" : "text-danger"}`}>
@@ -374,7 +376,7 @@ const MultiYearIncomeVsExpensesReport: React.FC<MultiYearIncomeVsExpensesReportP
                       <td
                         className={`py-5 text-right border-l-2 border-gray-300 dark:border-gray-600 font-bold pl-2 pr-2 ${overallTotals.net >= 0 ? "text-success" : "text-danger"}`}
                       >
-                        {formatCurrency(roundDown(overallTotals.net), currency, 0)}
+                        {money(roundDown(overallTotals.net), { precision: 0 })}
                       </td>
                     )}
                     <td className={`py-5 text-right ${availableYears.length === 1 ? 'border-l-2 border-gray-300 dark:border-gray-600 pl-2' : ''}`}>

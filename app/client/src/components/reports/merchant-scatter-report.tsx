@@ -17,7 +17,7 @@ import {
 import { useServiceQuery } from "@/hooks/useServiceQuery";
 import { useFinance } from "@/contexts/finance-context";
 import { localDateString } from "@/lib/date-utils";
-import { formatCurrency } from "@/lib/currency-formatter";
+import { useMoney } from '@/hooks/useMoney';
 import { openTransactionDrilldown } from "@/utils/drilldown-utils";
 import { getDbFilterArray } from "@/lib/report-filters";
 import { ChartLoadingState, ChartEmptyState } from "./chart-states";
@@ -96,22 +96,21 @@ function assignCluster(
 const CustomTooltip = ({
   active,
   payload,
-  currency,
   t,
 }: {
   active?: boolean;
   payload?: any[];
-  currency: string;
   t: (key: string) => string;
 }) => {
+  const money = useMoney();
   if (!active || !payload?.length) return null;
   const d: ScatterPoint = payload[0]?.payload;
   if (!d) return null;
   return (
     <ChartTooltip title={d.payee} className="p-3">
       <p className="text-muted-foreground">{t('Visits:')} <span className="text-foreground font-medium">{d.visit_count}</span></p>
-      <p className="text-muted-foreground">{t('Avg/visit:')} <span className="text-foreground font-medium">{formatCurrency(d.avg_per_visit, currency as any)}</span></p>
-      <p className="text-muted-foreground">{t('Total:')} <span className="text-foreground font-medium">{formatCurrency(d.total_spent, currency as any)}</span></p>
+      <p className="text-muted-foreground">{t('Avg/visit:')} <span className="text-foreground font-medium">{money(d.avg_per_visit)}</span></p>
+      <p className="text-muted-foreground">{t('Total:')} <span className="text-foreground font-medium">{money(d.total_spent)}</span></p>
     </ChartTooltip>
   );
 };
@@ -120,7 +119,8 @@ const MerchantScatterReport: React.FC<MerchantScatterReportProps> = ({
   filters,
 }) => {
   const { t } = useTranslation();
-  const { currency, categories } = useFinance();
+  const { categories } = useFinance();
+  const money = useMoney();
   const [allPoints, setAllPoints] = useState<ScatterPoint[]>([]);
   const [topN, setTopN] = useState(25);
 
@@ -279,7 +279,7 @@ const MerchantScatterReport: React.FC<MerchantScatterReportProps> = ({
                 type="number"
                 dataKey="total_spent"
                 name={t('Total spent')}
-                tickFormatter={(v) => formatCurrency(Math.round(v), currency as any, 0)}
+                tickFormatter={(v) => money(Math.round(v), { precision: 0 })}
                 tick={{ fontSize: 11 }}
                 label={{ value: t('Total spent'), angle: -90, position: "insideLeft", offset: 10, fontSize: 11 }}
                 width={85}
@@ -291,7 +291,7 @@ const MerchantScatterReport: React.FC<MerchantScatterReportProps> = ({
                 domain={[0, maxAvg]}
               />
               <Tooltip
-                content={<CustomTooltip currency={currency} t={t} />}
+                content={<CustomTooltip t={t} />}
                 cursor={{ strokeDasharray: "3 3" }}
               />
               <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: 11 }} />

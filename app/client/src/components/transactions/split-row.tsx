@@ -1,8 +1,7 @@
 import React from 'react';
 import { useDoubleTap } from "@/hooks/use-double-tap";
 import { useTranslation } from 'react-i18next';
-import { formatCurrency } from '@/lib/currency-formatter';
-import { useFinance } from '@/contexts/finance-context';
+import { useMoney } from '@/hooks/useMoney';
 import { cn } from '@/lib/utils';
 
 interface SplitRowProps {
@@ -20,7 +19,7 @@ interface SplitRowProps {
 const SplitRow: React.FC<SplitRowProps> = ({ split, onDoubleClick }) => {
   const { t } = useTranslation();
   const bindDoubleTap = useDoubleTap();
-  const { currency } = useFinance();
+  const money = useMoney();
 
   const isIncome = split.category_is_income;
   const categoryName = split.category_name || t('Uncategorized');
@@ -69,7 +68,7 @@ const SplitRow: React.FC<SplitRowProps> = ({ split, onDoubleClick }) => {
         isIncome ? "text-green-600 dark:text-green-400" : "text-foreground"
       )}>
         {parseFloat(split.amount) < 0 ? "-" : ""}
-        {formatCurrency(Math.abs(parseFloat(split.amount)), currency)}
+        {money(Math.abs(parseFloat(split.amount)))}
       </td>
 
       {/* Installment col — empty */}

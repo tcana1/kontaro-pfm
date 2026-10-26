@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartTooltip } from "@/components/ui/chart-tooltip";
 import { useFinance } from "@/contexts/finance-context";
 import { useAuth } from "@/contexts/auth-context";
-import { formatCurrency } from "@/lib/currency-formatter";
+import { useMoney } from '@/hooks/useMoney';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
 import { CategoryGroup, Category, Transaction } from "@shared/schema";
 import { useServiceQuery } from "@/hooks/useServiceQuery";
@@ -30,7 +30,8 @@ const SpendingBreakdownReport: React.FC<SpendingBreakdownReportProps> = ({
 }) => {
   const { t } = useTranslation();
   const bindDoubleTap = useDoubleTap();
-  const { currency, categories, categoryGroups, locale: userLocale, dateFormat } = useFinance();
+  const { categories, categoryGroups, locale: userLocale, dateFormat } = useFinance();
+  const money = useMoney();
   const [drilldownId, setDrilldownId] = useState<string | null>(null);
   const [drilldownName, setDrilldownName] = useState<string | null>(null);
 
@@ -131,7 +132,7 @@ const SpendingBreakdownReport: React.FC<SpendingBreakdownReportProps> = ({
     const slice = payload[0].payload;
     return (
       <ChartTooltip title={slice.name}>
-        <p>{formatCurrency(slice.value, currency)}</p>
+        <p>{money(slice.value)}</p>
         <p className="text-gray-500 dark:text-gray-400">
           {((slice.value / (chartData.total || 1)) * 100).toFixed(1)}%
         </p>
@@ -178,16 +179,13 @@ const SpendingBreakdownReport: React.FC<SpendingBreakdownReportProps> = ({
                 <div>
                   <h4 className="text-sm font-medium">{t('Total Expenses')}</h4>
                   <p className="text-2xl font-semibold">
-                    {formatCurrency(chartData.total, currency)}
+                    {money(chartData.total)}
                   </p>
                 </div>
                 <div>
                   <h4 className="text-sm font-medium">{t('Average Monthly')}</h4>
                   <p className="text-2xl font-semibold">
-                    {formatCurrency(
-                      chartData.total / (chartData.uniqueMonths || 1),
-                      currency,
-                    )}
+                    {money(chartData.total / (chartData.uniqueMonths || 1))}
                   </p>
                 </div>
               </div>
@@ -267,7 +265,7 @@ const SpendingBreakdownReport: React.FC<SpendingBreakdownReportProps> = ({
                           </div>
                         </td>
                         <td className="text-right py-2">
-                          {formatCurrency((item.value * -1), currency)}
+                          {money((item.value * -1))}
                         </td>
                         <td className="text-right py-2">
                           {chartData?.total && chartData.total > 0

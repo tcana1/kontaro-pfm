@@ -26,7 +26,7 @@ import {
 
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { formatCurrency } from "@/lib/currency-formatter";
+
 import { formatDateForDisplay } from "@/lib/date-utils";
 import { useFinance } from "@/contexts/finance-context";
 import { useToast } from "@/hooks/use-toast";

@@ -1,11 +1,9 @@
-
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { format } from 'date-fns';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { useServiceQuery } from '@/hooks/useServiceQuery';
-import { useFinance } from '@/contexts/finance-context';
-import { formatCurrency } from '@/lib/currency-formatter';
+import { useMoney } from '@/hooks/useMoney';
 
 interface Props {
   selectedMonth: Date;
@@ -42,7 +40,7 @@ function DeltaBadge({ value, label }: { value: number; label: string }) {
 
 export default function HeadlineStrip({ selectedMonth }: Props) {
   const { t } = useTranslation();
-  const { currency } = useFinance();
+  const money = useMoney();
   const monthKey = format(selectedMonth, 'yyyy-MM');
 
   const { data, isLoading } = useServiceQuery<MonthlyTotals>(
@@ -69,7 +67,7 @@ export default function HeadlineStrip({ selectedMonth }: Props) {
           <div className="mt-2 h-9 w-36 bg-gray-100 dark:bg-gray-700 rounded animate-pulse" />
         ) : (
           <p className="mt-2 text-xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100 tabular-nums">
-            {formatCurrency(current, currency, 0)}
+            {money(current, { precision: 0 })}
           </p>
         )}
       </div>
@@ -84,7 +82,7 @@ export default function HeadlineStrip({ selectedMonth }: Props) {
         ) : (
           <>
             <p className="mt-2 text-xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100 tabular-nums">
-              {momDelta > 0 ? '+' : ''}{formatCurrency(current - prior, currency, 0)}
+              {momDelta > 0 ? '+' : ''}{money(current - prior, { precision: 0 })}
             </p>
             <DeltaBadge value={momDelta} label={t('MoM')} />
           </>
@@ -101,7 +99,7 @@ export default function HeadlineStrip({ selectedMonth }: Props) {
         ) : (
           <>
             <p className="mt-2 text-xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100 tabular-nums">
-              {yoyDelta > 0 ? '+' : ''}{formatCurrency(current - priorYear, currency, 0)}
+              {yoyDelta > 0 ? '+' : ''}{money(current - priorYear, { precision: 0 })}
             </p>
             <DeltaBadge value={yoyDelta} label={t('YoY')} />
           </>

@@ -2,8 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { TrendingUp, TrendingDown } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
-import { formatCurrency } from '@/lib/currency-formatter';
-import { useFinance } from '@/contexts/finance-context';
+import { useMoney } from '@/hooks/useMoney';
 import { cn } from '@/lib/utils';
 
 interface SummaryCardProps {
@@ -26,7 +25,7 @@ const SummaryCard: React.FC<SummaryCardProps> = ({
   description
 }) => {
   const { t } = useTranslation();
-  const { currency } = useFinance();
+  const money = useMoney();
   const descriptionText = description ?? t('from last month');
   
   const isPositiveChange = percentChange >= 0;
@@ -39,7 +38,7 @@ const SummaryCard: React.FC<SummaryCardProps> = ({
           <div>
             <p className="text-sm text-gray-500 dark:text-gray-400">{title}</p>
             <h3 className="text-2xl font-semibold mt-1">
-              {isMonetary ? formatCurrency(value, currency) : `${value.toFixed(1)}%`}
+              {isMonetary ? money(value) : `${value.toFixed(1)}%`}
             </h3>
           </div>
           <div className={cn("p-2 rounded-md", iconBackground)}>

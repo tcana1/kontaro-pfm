@@ -7,7 +7,8 @@ import { useFinance } from '@/contexts/finance-context';
 import { useQueryClient, useIsFetching } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { useAccountBalance } from '@/hooks/useAccountBalance';
-import { formatCurrency, roundDown } from '@/lib/currency-formatter';
+import { roundDown } from '@/lib/currency-formatter';
+import { useMoney } from '@/hooks/useMoney';
 import { LogOut, ChevronDown, ChevronRight, Pencil, Plus, PanelLeftClose, PanelLeftOpen, Pin } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
@@ -52,7 +53,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, desktopMode, onSelec
   const { t } = useTranslation();
   const [location] = useLocation();
   const { user, signOut } = useAuth();
-  const { accounts, currency, isLoading: isFinanceLoading } = useFinance();
+  const { accounts, isLoading: isFinanceLoading } = useFinance();
+  const money = useMoney();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [isAccountsExpanded, setIsAccountsExpanded] = useState(false);
@@ -317,7 +319,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, desktopMode, onSelec
                                 "text-xs font-medium ml-2 pr-2"
                               )}
                             >
-                              {formatCurrency(roundDown(accountBalance.totalBalance), currency, 0)}
+                              {money(roundDown(accountBalance.totalBalance), { precision: 0 })}
                             </span>
                           )}
                         </div>
@@ -393,7 +395,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, desktopMode, onSelec
                                         "text-xs font-medium ml-2 opacity-60"
                                       )}
                                     >
-                                      {formatCurrency(roundDown(accountBalance.totalBalance), currency)}
+                                      {money(roundDown(accountBalance.totalBalance))}
                                     </span>
                                   )}
                                 </div>

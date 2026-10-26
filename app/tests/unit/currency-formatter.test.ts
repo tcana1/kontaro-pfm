@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  formatCurrency,
+  formatMoney,
   formatNumber,
   parseCurrency,
   getCurrencyOptions,
@@ -8,32 +8,56 @@ import {
   CurrencyCode,
 } from '../../client/src/lib/currency-formatter';
 
+// Intl separates symbol from digits with a non-breaking space in several locales.
+const norm = (s: string) => s.replace(/\s/g, ' ');
+
 describe('currency-formatter', () => {
-  describe('formatCurrency', () => {
-    it('should format a positive number to a USD currency string by default', () => {
-      expect(formatCurrency(1234.56)).toBe('$1,234.56');
+  describe('formatMoney', () => {
+    it('should format a USD amount with US punctuation', () => {
+      expect(formatMoney(1234.56, { currency: 'USD', locale: 'en-US' })).toBe('$1,234.56');
     });
 
-    it('should format a positive number to a BRL currency string', () => {
-      const formatted = formatCurrency(1234.56, 'BRL');
-      // Allow for non-breaking space and different decimal separators
-      expect(formatted.replace(/\s/g, ' ').replace(',', '.')).toBe('R$ 1.234.56');
+    it('should format a BRL amount with Brazilian punctuation', () => {
+      expect(norm(formatMoney(1234.56, { currency: 'BRL', locale: 'pt-BR' }))).toBe('R$ 1.234,56');
     });
 
-    it('should format a negative number to a EUR currency string', () => {
-      const formatted = formatCurrency(-500, 'EUR');
-      // Different locales might place the minus sign differently.
-      // This regex checks for €-500,00 or -€500,00 or -500,00 € etc.
-      expect(formatted.replace(/\s/g, ' ')).toMatch(/-?€?500,00€?/);
+    it('should punctuate by locale rather than by currency', () => {
+      // The whole point of taking locale: the same currency renders differently
+      // depending on the user's choice, instead of being pinned to en-US.
+      expect(norm(formatMoney(1234.56, { currency: 'USD', locale: 'pt-BR' }))).toBe('US$ 1.234,56');
+      expect(norm(formatMoney(1234.56, { currency: 'EUR', locale: 'fr-FR' }))).toBe('1 234,56 €');
     });
 
-    it('should format a number with no fractional part for JPY', () => {
-      // Check for both half-width and full-width yen symbols
-      expect(formatCurrency(2000, 'JPY')).toMatch(/[¥￥]2,000/);
+    it('should format a negative amount', () => {
+      expect(norm(formatMoney(-500, { currency: 'EUR', locale: 'de-DE' }))).toMatch(/-?500,00 ?€/);
     });
 
-    it('should handle zero correctly', () => {
-      expect(formatCurrency(0, 'GBP')).toBe('£0.00');
+    it('should drop the fractional part for a zero-precision currency', () => {
+      expect(formatMoney(2000, { currency: 'JPY', locale: 'ja-JP' })).toMatch(/[¥￥]2,000$/);
+    });
+
+    it('should handle zero', () => {
+      expect(formatMoney(0, { currency: 'GBP', locale: 'en-GB' })).toBe('£0.00');
+    });
+
+    it('should render the currency code when asked', () => {
+      expect(norm(formatMoney(1234.56, { currency: 'BRL', locale: 'pt-BR', currencyDisplay: 'code' })))
+        .toBe('BRL 1.234,56');
+    });
+
+    it('should drop the currency label entirely for currencyDisplay none', () => {
+      expect(formatMoney(1234.56, { currency: 'BRL', locale: 'pt-BR', currencyDisplay: 'none' }))
+        .toBe('1.234,56');
+    });
+
+    it('should round to whole units when hiding cents', () => {
+      expect(norm(formatMoney(1234.56, { currency: 'BRL', locale: 'pt-BR', hideCents: true })))
+        .toBe('R$ 1.235');
+    });
+
+    it('should let an explicit precision win over hideCents', () => {
+      expect(norm(formatMoney(1234.56, { currency: 'BRL', locale: 'pt-BR', hideCents: true, precision: 2 })))
+        .toBe('R$ 1.234,56');
     });
   });
 

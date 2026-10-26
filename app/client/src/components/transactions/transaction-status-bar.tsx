@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
-import { formatCurrency } from '@/lib/currency-formatter';
+import { useMoney } from '@/hooks/useMoney';
 import { useSingleAccountBalance } from '@/hooks/useAccountBalance';
 import { useFinance } from '@/contexts/finance-context';
 import { cn } from '@/lib/utils';
@@ -48,7 +48,8 @@ const TransactionStatusBar: React.FC<TransactionStatusBarProps> = ({
   isPaginationDisabled = false,
 }) => {
   const { t } = useTranslation();
-  const { currency, accounts, locale } = useFinance();
+  const { accounts, locale } = useFinance();
+  const money = useMoney();
   const [showReconcileInput, setShowReconcileInput] = useState(false);
   const [bankBalance, setBankBalance] = useState<string>('');
 
@@ -107,7 +108,7 @@ const TransactionStatusBar: React.FC<TransactionStatusBarProps> = ({
                   <span className="text-xs text-gray-500 dark:text-gray-400">{label}</span>
                   {balancesReady && value !== undefined && account ? (
                     <span className={cn('font-semibold tabular-nums', getBalanceTextColor(account.type_id))}>
-                      {formatCurrency(value, currency)}
+                      {money(value)}
                     </span>
                   ) : (
                     <div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse self-center" />
@@ -120,7 +121,7 @@ const TransactionStatusBar: React.FC<TransactionStatusBarProps> = ({
 
         {selectedCount > 0 && (
           <div className="shrink-0 whitespace-nowrap font-semibold text-white bg-blue-600 dark:bg-blue-500 px-3 py-1 rounded-md shadow-sm tabular-nums">
-            {t('Selected: {{amount}} ({{count}})', { count: selectedCount, amount: formatCurrency(selectedTotal, currency) })}
+            {t('Selected: {{amount}} ({{count}})', { count: selectedCount, amount: money(selectedTotal) })}
           </div>
         )}
       </div>

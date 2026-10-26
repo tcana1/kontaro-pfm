@@ -9,7 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { useServiceQuery } from "@/hooks/useServiceQuery";
 import { useFinance } from "@/contexts/finance-context";
 import { formatDateRangeLabel, localDateString } from "@/lib/date-utils";
-import { formatCurrency } from "@/lib/currency-formatter";
+import { useMoney } from '@/hooks/useMoney';
 import {
   BarChart,
   Bar,
@@ -44,7 +44,8 @@ const SpendingTrendsReport: React.FC<SpendingTrendsReportProps> = ({
 }) => {
   const { t } = useTranslation();
   const dateLocale = useDateFnsLocale();
-  const { currency, categories, categoryGroups, locale: userLocale, dateFormat } = useFinance();
+  const { categories, categoryGroups, locale: userLocale, dateFormat } = useFinance();
+  const money = useMoney();
   const isMobile = useIsMobile();
   const bindDoubleTap = useDoubleTap();
   const [reportData, setReportData] = useState<ChartDataEntry[]>([]);
@@ -215,7 +216,7 @@ const SpendingTrendsReport: React.FC<SpendingTrendsReportProps> = ({
                   <span>{name || "Unknown"}</span>
                 </div>
                 <span className="font-medium ml-4">
-                  {formatCurrency(entry.value, currency)}
+                  {money(entry.value)}
                 </span>
               </div>
             );
@@ -223,7 +224,7 @@ const SpendingTrendsReport: React.FC<SpendingTrendsReportProps> = ({
           <div className="border-t border-gray-200 dark:border-gray-700 mt-2 pt-1">
             <div className="flex justify-between font-medium">
               <span>{t('Total:')}</span>
-              <span>{formatCurrency(totalForMonth, currency)}</span>
+              <span>{money(totalForMonth)}</span>
             </div>
           </div>
         </ChartTooltip>
@@ -404,7 +405,7 @@ const SpendingTrendsReport: React.FC<SpendingTrendsReportProps> = ({
                 <div>
                   <h4 className="text-sm font-medium">{t('Total Expenses')}</h4>
                   <p className="text-2xl font-semibold">
-                    {formatCurrency(totalAmount, currency)}
+                    {money(totalAmount)}
                   </p>
                 </div>
                 <div>
@@ -414,7 +415,7 @@ const SpendingTrendsReport: React.FC<SpendingTrendsReportProps> = ({
                     const avgMonthly = totalAmount / (months || 1);
                     return (
                       <p className="text-2xl font-semibold">
-                        {formatCurrency(avgMonthly, currency)}
+                        {money(avgMonthly)}
                       </p>
                     );
                   })()}
@@ -576,7 +577,7 @@ const SpendingTrendsReport: React.FC<SpendingTrendsReportProps> = ({
                                 "bg-gray-100 dark:bg-gray-700",
                             )}
                           >
-                            {avgValue > 0 ? formatCurrency(avgValue, currency) : "-"}
+                            {avgValue > 0 ? money(avgValue) : "-"}
                           </td>
                         );
                       })}
@@ -593,7 +594,7 @@ const SpendingTrendsReport: React.FC<SpendingTrendsReportProps> = ({
                             "bg-gray-100 dark:bg-gray-700",
                         )}
                       >
-                        {formatCurrency(totalAverage, currency)}
+                        {money(totalAverage)}
                       </td>
                     </tr>
                     {reportData.map((month, rowIndex) => {
@@ -670,7 +671,7 @@ const SpendingTrendsReport: React.FC<SpendingTrendsReportProps> = ({
                               >
                                 <span className="relative z-10">
                                   {month[key]
-                                    ? formatCurrency(month[key], currency)
+                                    ? money(month[key])
                                     : "-"}
                                 </span>
                               </td>
@@ -700,7 +701,7 @@ const SpendingTrendsReport: React.FC<SpendingTrendsReportProps> = ({
                             } : undefined}
                             title={monthTotal > 0 ? t('Double-click to view all transactions for this month') : undefined}
                           >
-                            {formatCurrency(monthTotal, currency)}
+                            {money(monthTotal)}
                           </td>
                         </tr>
                       );

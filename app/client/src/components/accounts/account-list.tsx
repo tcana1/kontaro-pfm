@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useServiceQuery } from '@/hooks/useQuery';
@@ -21,7 +20,7 @@ import {
 import { Link } from 'wouter';
 import { useTranslation } from 'react-i18next';
 import { useFinance } from '@/contexts/finance-context';
-import { formatCurrency } from '@/lib/currency-formatter';
+import { useMoney } from '@/hooks/useMoney';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -70,7 +69,8 @@ const getInitialViewMode = (): ViewMode => {
 
 const AccountList: React.FC = () => {
   const { t } = useTranslation();
-  const { currency, categories } = useFinance();
+  const { categories } = useFinance();
+  const money = useMoney();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -237,7 +237,7 @@ const AccountList: React.FC = () => {
         <div>
           <h2 className="text-xl font-medium">{t('Your Accounts')}</h2>
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            {t('Total Balance: {{balance}}', { balance: formatCurrency(totalBalance, currency) })}
+            {t('Total Balance: {{balance}}', { balance: money(totalBalance) })}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -309,7 +309,7 @@ const AccountList: React.FC = () => {
                   </TableCell>
                   <TableCell className="text-gray-600 dark:text-gray-400">{getAccountTypeLabel(account)}</TableCell>
                   <TableCell className="text-right font-semibold tabular-nums">
-                    {formatCurrency(getBalance(account), currency)}
+                    {money(getBalance(account))}
                   </TableCell>
                   <TableCell>
                     <div className="flex justify-end gap-1">
@@ -378,7 +378,7 @@ const AccountList: React.FC = () => {
                 </div>
                 <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
                   <span className="text-lg font-semibold">
-                    {formatCurrency(getBalance(account), currency)}
+                    {money(getBalance(account))}
                   </span>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                     {t('Current Balance')}

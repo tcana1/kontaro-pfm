@@ -1,4 +1,3 @@
-
 import React, { useMemo, useState } from 'react';
 import { useDoubleTap } from "@/hooks/use-double-tap";
 import { useTranslation } from 'react-i18next';
@@ -7,8 +6,7 @@ import { format, parseISO } from 'date-fns';
 import { Link } from 'wouter';
 import { BarChart, Bar, ResponsiveContainer, Cell, Tooltip } from 'recharts';
 import { useServiceQuery } from '@/hooks/useServiceQuery';
-import { useFinance } from '@/contexts/finance-context';
-import { formatCurrency } from '@/lib/currency-formatter';
+import { useMoney } from '@/hooks/useMoney';
 import { openTransactionDrilldown } from '@/utils/drilldown-utils';
 import { ChartTooltip } from '@/components/ui/chart-tooltip';
 
@@ -50,12 +48,12 @@ interface SparklineProps {
   months: { month: string; net: number }[];
   color: string;
   currentMonth: string;
-  currency: any;
   onBarClick: (month: string) => void;
 }
 
-function SparklineTooltip({ active, payload, currency }: any) {
+function SparklineTooltip({ active, payload }: any) {
   const dateLocale = useDateFnsLocale();
+  const money = useMoney();
   if (!active || !payload?.length) return null;
   const d = payload[0]?.payload as { month: string; net: number } | undefined;
   if (!d) return null;
@@ -65,18 +63,18 @@ function SparklineTooltip({ active, payload, currency }: any) {
       className="px-2 py-1.5 text-xs pointer-events-none"
     >
       <p className="tabular-nums text-gray-600 dark:text-gray-400">
-        {formatCurrency(d.net, currency, 0)}
+        {money(d.net, { precision: 0 })}
       </p>
     </ChartTooltip>
   );
 }
 
-function Sparkline({ months, color, currentMonth, currency, onBarClick }: SparklineProps) {
+function Sparkline({ months, color, currentMonth, onBarClick }: SparklineProps) {
   return (
     <ResponsiveContainer width={200} height={32}>
       <BarChart data={months} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
         <Tooltip
-          content={(props: any) => <SparklineTooltip {...props} currency={currency} />}
+          content={(props: any) => <SparklineTooltip {...props} />}
           cursor={{ fill: 'rgba(0,0,0,0.04)' }}
         />
         <Bar
@@ -100,7 +98,7 @@ function Sparkline({ months, color, currentMonth, currency, onBarClick }: Sparkl
 export default function CategorySparklines({ selectedMonth }: Props) {
   const { t } = useTranslation();
   const bindDoubleTap = useDoubleTap();
-  const { currency } = useFinance();
+  const money = useMoney();
   const monthKey = format(selectedMonth, 'yyyy-MM');
   const [showAll, setShowAll] = useState(false);
 
@@ -196,7 +194,6 @@ export default function CategorySparklines({ selectedMonth }: Props) {
                       months={cat.months}
                       color={cat.color}
                       currentMonth={monthKey}
-                      currency={currency}
                       onBarClick={(barMonth) => openTransactionDrilldown({
                         month: barMonth,
                         categoryId: cat.category_id,
@@ -213,7 +210,7 @@ export default function CategorySparklines({ selectedMonth }: Props) {
 
                   {/* Current month net */}
                   <span className="text-sm tabular-nums text-gray-800 dark:text-gray-200 flex-shrink-0 w-24 text-right font-medium">
-                    {formatCurrency(cat.current_net, currency, 0)}
+                    {money(cat.current_net, { precision: 0 })}
                   </span>
                 </div>
               );

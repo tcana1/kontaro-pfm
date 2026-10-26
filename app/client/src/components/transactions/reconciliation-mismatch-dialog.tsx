@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle } from 'lucide-react';
-import { formatCurrency, type CurrencyCode } from '@/lib/currency-formatter';
+import { useMoney } from '@/hooks/useMoney';
 
 interface ReconciliationMismatchDialogProps {
   isOpen: boolean;
@@ -20,7 +20,6 @@ interface ReconciliationMismatchDialogProps {
   bankBalance: number;
   difference: number;
   transactionCount: number;
-  currency: string;
 }
 
 const ReconciliationMismatchDialog: React.FC<ReconciliationMismatchDialogProps> = ({
@@ -31,9 +30,9 @@ const ReconciliationMismatchDialog: React.FC<ReconciliationMismatchDialogProps> 
   bankBalance,
   difference,
   transactionCount,
-  currency,
 }) => {
   const { t } = useTranslation();
+  const money = useMoney();
   const isDifferencePositive = difference > 0;
   const adjustmentAmount = Math.abs(difference);
 
@@ -47,28 +46,28 @@ const ReconciliationMismatchDialog: React.FC<ReconciliationMismatchDialogProps> 
           </DialogTitle>
           <DialogDescription className="text-left space-y-3 pt-2">
             <p>
-              {t("We've detected a {{amount}} difference in the reconciliation:", { amount: formatCurrency(adjustmentAmount, currency as CurrencyCode) })}
+              {t("We've detected a {{amount}} difference in the reconciliation:", { amount: money(adjustmentAmount) })}
             </p>
             
             <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-md space-y-2 text-sm">
               <div className="flex justify-between">
                 <span>{t('Calculated balance:')}</span>
-                <span className="font-mono">{formatCurrency(calculatedBalance, currency as CurrencyCode)}</span>
+                <span className="font-mono">{money(calculatedBalance)}</span>
               </div>
               <div className="flex justify-between">
                 <span>{t('Bank statement balance:')}</span>
-                <span className="font-mono">{formatCurrency(bankBalance, currency as CurrencyCode)}</span>
+                <span className="font-mono">{money(bankBalance)}</span>
               </div>
               <div className="flex justify-between border-t pt-2">
                 <span className="font-medium">{t('Difference:')}</span>
                 <span className={`font-mono font-medium ${isDifferencePositive ? 'text-green-600' : 'text-red-600'}`}>
-                  {isDifferencePositive ? '+' : ''}{formatCurrency(difference, currency as CurrencyCode)}
+                  {isDifferencePositive ? '+' : ''}{money(difference)}
                 </span>
               </div>
             </div>
 
             <p>
-              {t('Do you want to proceed? This will create an adjustment transaction of {{amount}} to bring your balance in line with the bank statement.', { amount: formatCurrency(-difference, currency as CurrencyCode) })}
+              {t('Do you want to proceed? This will create an adjustment transaction of {{amount}} to bring your balance in line with the bank statement.', { amount: money(-difference) })}
             </p>
 
             <p className="text-xs text-gray-600 dark:text-gray-400">

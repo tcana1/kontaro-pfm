@@ -1,11 +1,10 @@
-
 import React from 'react';
 import { useDoubleTap } from "@/hooks/use-double-tap";
 import { useTranslation } from 'react-i18next';
 import { format } from 'date-fns';
 import { useServiceQuery } from '@/hooks/useServiceQuery';
 import { useFinance } from '@/contexts/finance-context';
-import { formatCurrency } from '@/lib/currency-formatter';
+
 
 const CURRENCY_SYMBOLS: Record<string, string> = {
   USD: '$', EUR: '€', GBP: '£', JPY: '¥', BRL: 'R$',

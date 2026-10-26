@@ -25,8 +25,7 @@ import type { Transaction } from '@shared/schema';
 import { getTodayISO } from '@/lib/date-utils';
 import { validateInstallment } from '@/utils/transaction-utils';
 import { useToast } from '@/hooks/use-toast';
-import { useFinance } from '@/contexts/finance-context';
-import { formatCurrency } from '@/lib/currency-formatter';
+import { useMoney } from '@/hooks/useMoney';
 import { supabaseService } from '@/services/supabase-service';
 import ReconciliationWarningDialog from './reconciliation-warning-dialog';
 import { tKey } from '@/lib/i18n-keys';
@@ -100,7 +99,7 @@ const EditableTransactionRow: React.FC<EditableTransactionRowProps> = ({
   const rowRef = useRef<HTMLTableRowElement>(null);
   const startedUncategorized = useRef(false);
   const routeContext = useRouteContext();
-  const { currency } = useFinance();
+  const money = useMoney();
 
   // Synchronous so it's available during the first render (ref is set later in a useEffect)
   const isUncategorizedEdit = !isNew && (!transaction?.splits?.[0]?.category_id || transaction?.category_name === 'Uncategorized');
@@ -635,8 +634,8 @@ const EditableTransactionRow: React.FC<EditableTransactionRowProps> = ({
                 {isBalanced
                   ? t('✓ Balanced')
                   : isOver
-                    ? t('{{amount}} over', { amount: formatCurrency(Math.abs(diff), currency) })
-                    : t('{{amount}} left', { amount: formatCurrency(Math.abs(diff), currency) })}
+                    ? t('{{amount}} over', { amount: money(Math.abs(diff)) })
+                    : t('{{amount}} left', { amount: money(Math.abs(diff)) })}
               </span>
             );
           })()}

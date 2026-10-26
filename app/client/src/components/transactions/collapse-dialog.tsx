@@ -16,7 +16,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { formatDateForDisplay } from '@/lib/date-utils';
-import { formatCurrency } from '@/lib/currency-formatter';
+import { useMoney } from '@/hooks/useMoney';
 import { useFinance } from '@/contexts/finance-context';
 import { Layers, AlertTriangle } from 'lucide-react';
 import type { Transaction } from '@shared/schema';
@@ -45,7 +45,8 @@ const CollapseDialog: React.FC<CollapseDialogProps> = ({
   onCollapse,
 }) => {
   const { t } = useTranslation();
-  const { currency, locale, dateFormat } = useFinance();
+  const { locale, dateFormat } = useFinance();
+  const money = useMoney();
   const [baseId, setBaseId] = useState<number | null>(null);
   const [fieldSource, setFieldSource] = useState<{ payee: number; payment_date: number; purchase_date: number }>({
     payee: 0,
@@ -90,7 +91,7 @@ const CollapseDialog: React.FC<CollapseDialogProps> = ({
 
   const txAmountLabel = (txn: Transaction) => {
     const amt = parseFloat((txn as any).amount ?? '0');
-    return `${amt < 0 ? '-' : ''}${formatCurrency(Math.abs(amt), currency)}`;
+    return `${amt < 0 ? '-' : ''}${money(Math.abs(amt))}`;
   };
 
   const fieldRow = (
@@ -189,7 +190,7 @@ const CollapseDialog: React.FC<CollapseDialogProps> = ({
           <p className="text-xs text-amber-700 dark:text-amber-400">
             {t('Result: 1 transaction with {{splits}} splits, total {{total}}.', {
               splits: transactions.reduce((n, txn) => n + ((txn as any).splits?.length ?? 1), 0),
-              total: `${totalAmount < 0 ? '-' : ''}${formatCurrency(Math.abs(totalAmount), currency)}`
+              total: `${totalAmount < 0 ? '-' : ''}${money(Math.abs(totalAmount))}`
             })}{' '}
             {transactions.length - 1 === 1
               ? t('The other transaction will be permanently deleted.')

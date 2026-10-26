@@ -4,7 +4,7 @@ import { ptBR } from 'date-fns/locale';
 
 vi.mock('@/lib/date-fns-locale', () => ({ useDateFnsLocale: () => ptBR }));
 vi.mock('@/hooks/use-mobile', () => ({ useIsMobile: () => false }));
-vi.mock('@/lib/currency-formatter', () => ({ formatCurrency: (v: number) => `R$ ${v}` }));
+vi.mock('@/lib/currency-formatter', () => ({ formatMoney: (v: number) => `R$ ${v}` }));
 vi.mock('@/contexts/finance-context', () => ({
   useFinance: () => ({
     currency: 'BRL',

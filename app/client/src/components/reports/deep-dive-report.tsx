@@ -6,9 +6,8 @@ import MerchantScatterReport from "@/components/reports/merchant-scatter-report"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartTooltipList } from "@/components/ui/chart-tooltip";
 import { useServiceQuery } from "@/hooks/useServiceQuery";
-import { useFinance } from "@/contexts/finance-context";
 import { localDateString, isAllTimeStart, daysBetween } from "@/lib/date-utils";
-import { formatCurrency } from "@/lib/currency-formatter";
+import { useMoney } from '@/hooks/useMoney';
 import { openTransactionDrilldown } from "@/utils/drilldown-utils";
 import { format, parseISO } from "date-fns";
 import { getDbFilterArray } from "@/lib/report-filters";
@@ -99,7 +98,7 @@ type DistributionRow = {
 const HistogramChart: React.FC<{ filters: Filters }> = ({ filters }) => {
   const { t } = useTranslation();
   const bindDoubleTap = useDoubleTap();
-  const { currency } = useFinance();
+  const money = useMoney();
   const { data, isLoading } = useServiceQuery("get_transaction_size_distribution", {
     rawQuery: true,
     queryParams: buildQueryParams(filters),
@@ -161,7 +160,7 @@ type DailySpendRow = { date: string; daily_total: number };
 const RollingSpendChart: React.FC<{ filters: Filters }> = ({ filters }) => {
   const { t } = useTranslation();
   const dateLocale = useDateFnsLocale();
-  const { currency } = useFinance();
+  const money = useMoney();
   const { data, isLoading } = useServiceQuery("get_daily_spending", {
     rawQuery: true,
     queryParams: buildQueryParams(filters),
@@ -227,7 +226,7 @@ const RollingSpendChart: React.FC<{ filters: Filters }> = ({ filters }) => {
             <Tooltip
               content={<ChartTooltipList />}
               labelFormatter={(d) => format(parseISO(d as string), "PP", { locale: dateLocale })}
-              formatter={(v: number, name: string) => [formatCurrency(v, currency), name]}
+              formatter={(v: number, name: string) => [money(v), name]}
             />
             <Area
               type="monotone"
@@ -261,7 +260,7 @@ type SeasonalRow = { year: number; month: number; total: number };
 const SeasonalPatternChart: React.FC<{ filters: Filters }> = ({ filters }) => {
   const { t } = useTranslation();
   const dateLocale = useDateFnsLocale();
-  const { currency } = useFinance();
+  const money = useMoney();
   const { data, isLoading } = useServiceQuery("get_seasonal_pattern", {
     rawQuery: true,
     queryParams: buildQueryParams(filters),
@@ -327,7 +326,7 @@ const SeasonalPatternChart: React.FC<{ filters: Filters }> = ({ filters }) => {
           {highestMonth && (
             <StatBadge
               label={t('Highest month')}
-              value={`${highestMonth.label} ${highestMonth.year} — ${formatCurrency(highestMonth.value, currency)}`}
+              value={`${highestMonth.label} ${highestMonth.year} — ${money(highestMonth.value)}`}
             />
           )}
           {consistentMonth && (
@@ -344,7 +343,7 @@ const SeasonalPatternChart: React.FC<{ filters: Filters }> = ({ filters }) => {
               tick={{ fontSize: 11 }}
               tickFormatter={(v) => (v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v))}
             />
-            <Tooltip content={<ChartTooltipList />} formatter={(v: number) => [formatCurrency(v, currency), ""]} />
+            <Tooltip content={<ChartTooltipList />} formatter={(v: number) => [money(v), ""]} />
             <Legend />
             {years.map((year, i) => (
               <Line
@@ -378,7 +377,7 @@ const TicketSizeChart: React.FC<{ filters: Filters }> = ({ filters }) => {
   const bindDoubleTap = useDoubleTap();
   const lastChartState = useRef<any>(null);
   const dateLocale = useDateFnsLocale();
-  const { currency } = useFinance();
+  const money = useMoney();
   const { data, isLoading } = useServiceQuery("get_ticket_size_stats", {
     rawQuery: true,
     queryParams: buildQueryParams(filters),
@@ -427,8 +426,8 @@ const TicketSizeChart: React.FC<{ filters: Filters }> = ({ filters }) => {
       <CardHeader>
         <CardTitle className="text-base">{t('Ticket Size Analysis')}</CardTitle>
         <div className="flex flex-wrap gap-4 mt-1">
-          <StatBadge label={t('Avg ticket')} value={formatCurrency(avgTicket, currency)} />
-          <StatBadge label={t('Mean/Median gap')} value={formatCurrency(meanMedianGap, currency)} />
+          <StatBadge label={t('Avg ticket')} value={money(avgTicket)} />
+          <StatBadge label={t('Mean/Median gap')} value={money(meanMedianGap)} />
           <StatBadge label={t('Total visits')} value={String(totalVisits)} />
         </div>
       </CardHeader>
@@ -450,7 +449,7 @@ const TicketSizeChart: React.FC<{ filters: Filters }> = ({ filters }) => {
               tick={{ fontSize: 11 }}
               tickFormatter={(v) => (v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v))}
             />
-            <Tooltip content={<ChartTooltipList />} formatter={(v: number, name: string) => [formatCurrency(v, currency), name]} />
+            <Tooltip content={<ChartTooltipList />} formatter={(v: number, name: string) => [money(v), name]} />
             <Legend />
             <Area
               type="monotone"

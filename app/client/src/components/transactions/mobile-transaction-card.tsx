@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import CheckCircleEmpty from '@/assets/icons/check-circle-empty.svg?react';
 import CheckCircleFilled from '@/assets/icons/check-circle-filled.svg?react';
 import LockFilled from '@/assets/icons/lock-filled.svg?react';
-import { formatCurrency } from '@/lib/currency-formatter';
+import { useMoney } from '@/hooks/useMoney';
 import { useFinance } from '@/contexts/finance-context';
 import { useLongPress } from '@/hooks/use-long-press';
 import { toISODateString, getTodayISO, formatDateForDisplay } from '@/lib/date-utils';
@@ -69,7 +69,8 @@ const MobileTransactionCard: React.FC<Props> = ({
 }) => {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
-  const { currency, locale, dateFormat } = useFinance();
+  const { locale, dateFormat } = useFinance();
+  const money = useMoney();
 
   const longPressHandlers = useLongPress(() => onLongPress?.());
 
@@ -175,7 +176,7 @@ const MobileTransactionCard: React.FC<Props> = ({
               : 'text-foreground',
           )}>
             {parseFloat(displayAmount) < 0 ? '-' : ''}
-            {formatCurrency(Math.abs(parseFloat(displayAmount)), currency)}
+            {money(Math.abs(parseFloat(displayAmount)))}
           </span>
         </div>
       </div>
@@ -240,7 +241,7 @@ const MobileTransactionCard: React.FC<Props> = ({
                     <span className="truncate flex-1 min-w-0">{cat}</span>
                     {amt != null && (
                       <span className="tabular-nums flex-shrink-0 ml-2">
-                        {amt < 0 ? '-' : ''}{formatCurrency(Math.abs(amt), currency)}
+                        {amt < 0 ? '-' : ''}{money(Math.abs(amt))}
                       </span>
                     )}
                   </div>

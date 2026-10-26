@@ -1,11 +1,9 @@
-
 import React, { useState } from 'react';
 import { useDoubleTap } from "@/hooks/use-double-tap";
 import { useTranslation } from 'react-i18next';
 import { format } from 'date-fns';
 import { useServiceQuery } from '@/hooks/useServiceQuery';
-import { useFinance } from '@/contexts/finance-context';
-import { formatCurrency } from '@/lib/currency-formatter';
+import { useMoney } from '@/hooks/useMoney';
 import { openTransactionDrilldown } from '@/utils/drilldown-utils';
 
 interface Props {
@@ -26,7 +24,7 @@ const EXPANDED = 8;
 export default function NewMerchantsCard({ selectedMonth }: Props) {
   const { t } = useTranslation();
   const bindDoubleTap = useDoubleTap();
-  const { currency } = useFinance();
+  const money = useMoney();
   const monthKey = format(selectedMonth, 'yyyy-MM');
   const [expanded, setExpanded] = useState(false);
 
@@ -86,7 +84,7 @@ export default function NewMerchantsCard({ selectedMonth }: Props) {
                 )}
               </div>
               <span className="text-sm font-medium tabular-nums text-gray-700 dark:text-gray-300 flex-shrink-0 text-right">
-                {formatCurrency(item.net, currency, 0)}
+                {money(item.net, { precision: 0 })}
               </span>
             </div>
           ))}

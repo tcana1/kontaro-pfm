@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { formatDateForDisplay } from '@/lib/date-utils';
-import { formatCurrency, type CurrencyCode } from '@/lib/currency-formatter';
+import { useMoney } from '@/hooks/useMoney';
 import { useFinance } from '@/contexts/finance-context';
 import { cn } from '@/lib/utils';
 import { Merge } from 'lucide-react';
@@ -130,11 +130,11 @@ interface SplitSelectorProps {
   b: MatchTransactionSide;
   selected: 'winner' | 'loser';
   onSelect: (src: 'winner' | 'loser') => void;
-  currency: string;
 }
 
-const SplitSelector: React.FC<SplitSelectorProps> = ({ a, b, selected, onSelect, currency }) => {
+const SplitSelector: React.FC<SplitSelectorProps> = ({ a, b, selected, onSelect }) => {
   const { t } = useTranslation();
+  const money = useMoney();
   const options: { src: 'winner' | 'loser'; label: string; tx: MatchTransactionSide }[] = [
     { src: 'winner', label: createdAtLabel(a.created_at), tx: a },
     { src: 'loser',  label: createdAtLabel(b.created_at), tx: b },
@@ -178,7 +178,7 @@ const SplitSelector: React.FC<SplitSelectorProps> = ({ a, b, selected, onSelect,
                       {splitCategoryLabel(s)}{s.observation ? ` · ${s.observation}` : ''}
                     </span>
                     <span className="tabular-nums shrink-0">
-                      {formatCurrency(parseFloat(String(s.amount)), currency as CurrencyCode)}
+                      {money(parseFloat(String(s.amount)))}
                     </span>
                   </div>
                 ))}
@@ -189,7 +189,7 @@ const SplitSelector: React.FC<SplitSelectorProps> = ({ a, b, selected, onSelect,
       </div>
       {showDiffWarning && lastSplit && (
         <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">
-          ⚠️ "{splitCategoryLabel(lastSplit)}" will be adjusted from {formatCurrency(parseFloat(String(lastSplit.amount)), currency as CurrencyCode)} → {formatCurrency(parseFloat(String(lastSplit.amount)) + diff, currency as CurrencyCode)} to match the total of {formatCurrency(bAmount, currency as CurrencyCode)}.
+          ⚠️ "{splitCategoryLabel(lastSplit)}" will be adjusted from {money(parseFloat(String(lastSplit.amount)))} → {money(parseFloat(String(lastSplit.amount)) + diff)} to match the total of {money(bAmount)}.
         </p>
       )}
     </div>
@@ -228,7 +228,8 @@ export const MergeTransactionDialog: React.FC<MergeTransactionDialogProps> = ({
   onDismiss,
 }) => {
   const { t } = useTranslation();
-  const { currency, locale, dateFormat } = useFinance();
+  const { locale, dateFormat } = useFinance();
+  const money = useMoney();
   const [selections, setSelections] = useState<FieldSelections>({});
   const [splitSource, setSplitSource] = useState<'winner' | 'loser'>('winner');
   const [loading, setLoading] = useState(false);
@@ -336,13 +337,13 @@ export const MergeTransactionDialog: React.FC<MergeTransactionDialogProps> = ({
           <div className="text-xs font-semibold text-center text-gray-600 dark:text-gray-400 px-3">
             {createdAtLabel(a.created_at)}
             <div className="text-[10px] font-normal text-gray-400">
-              {formatCurrency(parseFloat(String(a.amount)), currency)}
+              {money(parseFloat(String(a.amount)))}
             </div>
           </div>
           <div className="text-xs font-semibold text-center text-gray-600 dark:text-gray-400 px-3">
             {createdAtLabel(b.created_at)}
             <div className="text-[10px] font-normal text-emerald-600 dark:text-emerald-400">
-              {formatCurrency(parseFloat(String(b.amount)), currency)}
+              {money(parseFloat(String(b.amount)))}
             </div>
           </div>
         </div>
@@ -384,8 +385,8 @@ export const MergeTransactionDialog: React.FC<MergeTransactionDialogProps> = ({
               {amountsDiffer && (
                 <FieldRow
                   label={t('Amount')}
-                  valueA={formatCurrency(parseFloat(String(a.amount)), currency)}
-                  valueB={formatCurrency(parseFloat(String(b.amount)), currency)}
+                  valueA={money(parseFloat(String(a.amount)))}
+                  valueB={money(parseFloat(String(b.amount)))}
                   field="amount"
                   selected={selections['amount'] ?? 'a'}
                   onSelect={handleSelect}
@@ -424,7 +425,6 @@ export const MergeTransactionDialog: React.FC<MergeTransactionDialogProps> = ({
             b={b}
             selected={splitSource}
             onSelect={setSplitSource}
-            currency={currency}
           />
         )}
 
