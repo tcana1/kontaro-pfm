@@ -509,7 +509,7 @@ const SpendingTrendsReport: React.FC<SpendingTrendsReportProps> = ({
                 className="w-full text-sm"
                 onMouseLeave={() => setHoveredCell({ row: null, col: null })}
               >
-                <thead className="sticky -top-6 bg-white dark:bg-gray-900 z-50 border-b-2 border-gray-200 dark:border-gray-700 shadow-sm">
+                <thead className="sticky top-[var(--mobile-header-h,0px)] md:-top-6 bg-white dark:bg-gray-900 z-50 border-b-2 border-gray-200 dark:border-gray-700 shadow-sm">
                     <tr>
                       <th
                         className={cn(

@@ -525,9 +525,10 @@ const handleDismissMatch = async (matchCandidateId: number) => {
     setPage(1);
   }, [search, filters]);
 
-  // Scroll the main container back to top on page change
+  // Scroll the main container (desktop) and the document (mobile) back to top on page change
   useEffect(() => {
     document.querySelector('main')?.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [page]);
 
   

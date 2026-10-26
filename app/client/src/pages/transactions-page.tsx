@@ -549,9 +549,9 @@ const TransactionsPageContent: React.FC<TransactionsPageContentProps> = ({ accou
         </div>
       )}
       
-      <div className="flex-1 flex flex-col bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 shadow-sm max-w-full p-0">
+      <div className="flex-1 flex flex-col bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 shadow-sm max-w-full p-0 pb-[env(safe-area-inset-bottom)]">
         {/* Sticky wrapper for controls and table header */}
-        <div className="sticky top-0 z-10 bg-white dark:bg-gray-800">
+        <div className="sticky top-[var(--mobile-header-h,0px)] md:top-0 z-10 bg-white dark:bg-gray-800">
           <TransactionControls
             search={search}
             onSearchChange={handleSearchChange}

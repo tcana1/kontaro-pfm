@@ -63,6 +63,22 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, desktopMode, onSelec
   const [isAddAccountDialogOpen, setIsAddAccountDialogOpen] = useState(false);
   const [isHoverExpanded, setIsHoverExpanded] = useState(false);
 
+  // Mobile drawer: display:none while closed (so iOS 26 Safari ignores this fixed edge-to-edge
+  // element when tinting its bottom bar), mounted before sliding in and after sliding out.
+  const [isMobileMounted, setIsMobileMounted] = useState(isOpen);
+  const [isMobileShown, setIsMobileShown] = useState(false);
+  useEffect(() => {
+    if (isOpen) {
+      setIsMobileMounted(true);
+      let inner = 0;
+      const outer = requestAnimationFrame(() => { inner = requestAnimationFrame(() => setIsMobileShown(true)); });
+      return () => { cancelAnimationFrame(outer); cancelAnimationFrame(inner); };
+    }
+    setIsMobileShown(false);
+    const timer = setTimeout(() => setIsMobileMounted(false), 300);
+    return () => clearTimeout(timer);
+  }, [isOpen]);
+
   // Reset hover expansion when switching modes
   useEffect(() => {
     if (desktopMode !== "hover") setIsHoverExpanded(false);
@@ -134,15 +150,16 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, desktopMode, onSelec
         "bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 shadow-sm",
         // Mobile: full-width overlay, hidden by default
         "w-64 -translate-x-full",
+        !isMobileMounted && "max-md:hidden",
         // Desktop: always visible, width driven by mode
         desktopWidthClass,
         "md:translate-x-0",
-        isOpen && "translate-x-0"
+        isMobileShown && "translate-x-0"
       )}
       onMouseEnter={() => desktopMode === "hover" && setIsHoverExpanded(true)}
       onMouseLeave={() => desktopMode === "hover" && setIsHoverExpanded(false)}
     >
-      <div className="flex flex-col h-full overflow-hidden">
+      <div className="flex flex-col h-full overflow-hidden pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
         {/* Logo / Header */}
         <div className={cn(
           "flex items-center py-5 shrink-0 transition-all duration-200",

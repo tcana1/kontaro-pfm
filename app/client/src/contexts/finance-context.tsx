@@ -202,11 +202,17 @@ export const FinanceProvider: React.FC<FinanceProviderProps> = ({ children }) =>
     const htmlElement = document.documentElement;
     
     const setDocumentTheme = () => {
-      if (theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-        htmlElement.classList.add('dark');
-      } else {
-        htmlElement.classList.remove('dark');
-      }
+      const isDark =
+        theme === 'dark' ||
+        (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+
+      htmlElement.classList.toggle('dark', isDark);
+
+      // Keep the Safari iOS status bar color in sync with the header background
+      // (bg-white in light, dark:bg-gray-800 = #1f2937 in dark).
+      document
+        .querySelector('meta[name="theme-color"]')
+        ?.setAttribute('content', isDark ? '#1f2937' : '#ffffff');
     };
 
     setDocumentTheme();
