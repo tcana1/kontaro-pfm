@@ -521,12 +521,12 @@ const TransactionsPageContent: React.FC<TransactionsPageContentProps> = ({ accou
         : []),
     ];
     return (
-      <div className="flex justify-around">
+      <div className="flex justify-between gap-1.5">
         {items.map(({ label, value }) => (
-          <div key={label} className="flex flex-col items-center gap-0.5">
+          <div key={label} className="flex flex-col items-center gap-0.5 min-w-0">
             <span className="text-xs text-gray-500 dark:text-gray-400">{label}</span>
             {value !== undefined ? (
-              <span className={cn('text-sm font-semibold tabular-nums', balanceColor)}>
+              <span className={cn('text-sm font-semibold tabular-nums whitespace-nowrap', balanceColor)}>
                 {formatCurrency(value, currency)}
               </span>
             ) : (

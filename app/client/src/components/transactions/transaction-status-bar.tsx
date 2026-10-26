@@ -101,13 +101,13 @@ const TransactionStatusBar: React.FC<TransactionStatusBarProps> = ({
     <div className="mt-auto sticky bottom-0 z-10 flex items-center justify-between gap-4 px-4 py-1.5 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 shadow-[0_-1px_3px_rgba(0,0,0,0.06)] text-sm">
       <div className="flex items-center gap-x-4 gap-y-1 min-w-0 flex-wrap">
         {accountId && (
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-x-2 gap-y-1 min-w-0 flex-wrap">
             {balanceItems.map(({ label, value }, index) => (
               <React.Fragment key={label}>
                 {index > 0 && (
                   <span className="text-gray-400 dark:text-gray-500 font-bold">{index === 1 ? '+' : '='}</span>
                 )}
-                <div className="flex items-baseline gap-1.5">
+                <div className="flex items-baseline gap-1.5 whitespace-nowrap">
                   <span className="text-xs text-gray-500 dark:text-gray-400">{label}</span>
                   {balancesReady && value !== undefined && account ? (
                     <span className={cn('font-semibold tabular-nums', getBalanceTextColor(account.type_id))}>
@@ -124,7 +124,7 @@ const TransactionStatusBar: React.FC<TransactionStatusBarProps> = ({
               <>
                 <span className="text-gray-300 dark:text-gray-600">|</span>
                 <div
-                  className="flex items-baseline gap-1.5"
+                  className="flex items-baseline gap-1.5 whitespace-nowrap"
                   title={t('Includes {{amount}} of installments the open bill should charge but the bank has not reported yet', {
                     amount: formatCurrency(Math.abs(projected), currency),
                   })}

@@ -72,6 +72,25 @@ function buildTimeline(active: InstallmentSeries[], fromMonth: Date, dateLocale:
   });
 }
 
+// The panel shows whole units, and rounding each line on its own makes the visible
+// lines disagree with the section total (sum of roundings != rounding of the sum).
+// Largest remainder instead: floor every line, then hand the leftover units to the
+// biggest fractions, so the lines always add up to the total displayed above them.
+function apportion(values: number[], total: number): number[] {
+  const out = values.map(Math.floor);
+  let leftover = Math.round(total) - out.reduce((sum, v) => sum + v, 0);
+  const byFraction = values
+    .map((v, i) => ({ i, fraction: v - Math.floor(v) }))
+    .sort((a, b) => b.fraction - a.fraction);
+
+  for (const { i } of byFraction) {
+    if (leftover <= 0) break;
+    out[i] += 1;
+    leftover -= 1;
+  }
+  return out;
+}
+
 interface ExpandableSectionProps {
   label: string;
   items: Array<MonthEvent & { remaining?: number; paid?: number }>;
@@ -85,6 +104,8 @@ interface ExpandableSectionProps {
 function ExpandableSection({ label, items, total, currency, totalSuffix, showInstallmentCount, showProgress }: ExpandableSectionProps) {
   const [open, setOpen] = useState(false);
   if (items.length === 0) return null;
+
+  const displayAmounts = apportion(items.map(i => i.monthly_amount), total);
 
   return (
     <div>
@@ -111,10 +132,10 @@ function ExpandableSection({ label, items, total, currency, totalSuffix, showIns
               <span className="text-xs text-gray-500 dark:text-gray-400 truncate">{item.payee}</span>
               <span className="text-xs tabular-nums text-gray-500 dark:text-gray-400 flex-shrink-0">
                 {showProgress && item.paid != null && item.installment_total > 0
-                  ? <><span className="text-gray-400 dark:text-gray-500 mr-1.5">{item.paid}/{item.installment_total}</span>{formatCurrency(item.monthly_amount, currency, 0)}</>
+                  ? <><span className="text-gray-400 dark:text-gray-500 mr-1.5">{item.paid}/{item.installment_total}</span>{formatCurrency(displayAmounts[i], currency, 0)}</>
                   : showInstallmentCount && item.installment_total > 0
-                  ? `${item.installment_total}x ${formatCurrency(item.monthly_amount, currency, 0)}`
-                  : formatCurrency(item.monthly_amount, currency, 0)
+                  ? `${item.installment_total}x ${formatCurrency(displayAmounts[i], currency, 0)}`
+                  : formatCurrency(displayAmounts[i], currency, 0)
                 }
               </span>
             </div>
