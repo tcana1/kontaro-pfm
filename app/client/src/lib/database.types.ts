@@ -1298,7 +1298,10 @@ export type Database = {
         Returns: Json
       }
       get_dashboard_installments: { Args: { p_month: string }; Returns: Json }
-      get_dashboard_monthly_totals: { Args: { p_month: string }; Returns: Json }
+      get_dashboard_monthly_totals: {
+        Args: { p_month: string; p_today?: string }
+        Returns: Json
+      }
       get_dashboard_surprises: {
         Args: {
           p_baseline_months?: number
