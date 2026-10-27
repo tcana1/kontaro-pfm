@@ -4,6 +4,8 @@ import {
   formatNumber,
   parseCurrency,
   getCurrencyOptions,
+  getNumberFormatOptions,
+  getCurrencyDisplayOptions,
   roundCents,
   CurrencyCode,
 } from '../../client/src/lib/currency-formatter';
@@ -77,12 +79,13 @@ describe('currency-formatter', () => {
       expect(parseCurrency('$1,234.56')).toBe(1234.56);
     });
 
-    it('should parse a BRL currency string with a comma decimal separator', () => {
-      expect(parseCurrency('R$1.234,56', 'BRL')).toBe(1234.56);
+    it('should parse a comma-decimal string in a comma-decimal locale', () => {
+      expect(parseCurrency('R$1.234,56', 'pt-BR')).toBe(1234.56);
     });
 
-    it('should parse a EUR currency string', () => {
-      expect(parseCurrency('€500,00', 'EUR')).toBe(500.00);
+    it('should parse a EUR amount using the locale, not the currency', () => {
+      expect(parseCurrency('€500,00', 'de-DE')).toBe(500.00);
+      expect(parseCurrency('€500.00', 'en-US')).toBe(500.00);
     });
 
     it('should return null for an invalid currency string', () => {
@@ -94,7 +97,22 @@ describe('currency-formatter', () => {
     });
 
     it('should handle values with no fractional part', () => {
-      expect(parseCurrency('¥2000', 'JPY')).toBe(2000);
+      expect(parseCurrency('¥2000', 'ja-JP')).toBe(2000);
+    });
+
+    it('should read punctuation from the locale even when it is not the currency home', () => {
+      // A USD user whose locale is pt-BR types "45,90" and means 45.90.
+      expect(parseCurrency('45,90', 'pt-BR')).toBe(45.9);
+      expect(parseCurrency('1.234,56', 'pt-BR')).toBe(1234.56);
+    });
+
+    it('should handle apostrophe and narrow-space grouping', () => {
+      expect(parseCurrency("1'234.56", 'de-CH')).toBe(1234.56);
+      expect(parseCurrency('1 234,56', 'fr-FR')).toBe(1234.56);
+    });
+
+    it('should handle lakh grouping', () => {
+      expect(parseCurrency('1,23,456.78', 'en-IN')).toBe(123456.78);
     });
   });
 
@@ -121,7 +139,7 @@ describe('currency-formatter', () => {
 
   describe('getCurrencyOptions', () => {
     it('should return an array of currency options', () => {
-      const options = getCurrencyOptions();
+      const options = getCurrencyOptions('en-US');
       expect(Array.isArray(options)).toBe(true);
       expect(options.length).toBeGreaterThan(0);
       expect(options[0]).toHaveProperty('value');
@@ -129,11 +147,66 @@ describe('currency-formatter', () => {
     });
 
     it('should include major currencies', () => {
-      const options = getCurrencyOptions();
-      const codes = options.map(o => o.value);
+      const codes = getCurrencyOptions('en-US').map(o => o.value);
       expect(codes).toContain('USD');
       expect(codes).toContain('EUR');
       expect(codes).toContain('BRL');
+    });
+
+    it('should render the symbol the app will actually show, which is locale-dependent', () => {
+      const under = (locale: string, code: CurrencyCode) =>
+        norm(getCurrencyOptions(locale, 'en').find(o => o.value === code)!.label);
+
+      // A static "CAD ($)" label was wrong: en-US renders CA$.
+      expect(under('en-US', 'CAD')).toContain('CA$');
+      expect(under('pt-BR', 'USD')).toContain('US$');
+      expect(under('en-US', 'USD')).toContain('$1,234.56');
+    });
+  });
+
+  describe('getNumberFormatOptions', () => {
+    it('should offer one option per distinct punctuation', () => {
+      const labels = getNumberFormatOptions().map(o => norm(o.label));
+      expect(labels).toEqual([
+        '123,456.78',
+        '123.456,78',
+        '123 456,78',
+        "123'456.78",
+        '1,23,456.78',
+      ]);
+    });
+
+    it('should keep an equivalent stored locale as the value for its punctuation', () => {
+      // es-ES punctuates exactly like pt-BR, so it must not be rewritten.
+      const options = getNumberFormatOptions('es-ES');
+      expect(options.map(o => o.value)).toContain('es-ES');
+      expect(options.map(o => o.value)).not.toContain('pt-BR');
+      expect(options).toHaveLength(5);
+    });
+
+    it('should append a stored locale that punctuates unlike any offered one', () => {
+      const options = getNumberFormatOptions('de-AT');
+      expect(options.map(o => o.value)).toContain('de-AT');
+    });
+  });
+
+  describe('getCurrencyDisplayOptions', () => {
+    it('should collapse display modes that render identically', () => {
+      // BRL is R$ as both symbol and narrowSymbol, so only one of them is offered.
+      const options = getCurrencyDisplayOptions('BRL', 'pt-BR');
+      expect(options.map(o => o.value)).toEqual(['symbol', 'code', 'none']);
+    });
+
+    it('should keep the narrow symbol when it differs from the full one', () => {
+      const options = getCurrencyDisplayOptions('USD', 'pt-BR');
+      expect(options.map(o => o.value)).toContain('narrowSymbol');
+      expect(norm(options.find(o => o.value === 'symbol')!.label)).toContain('US$');
+      expect(norm(options.find(o => o.value === 'narrowSymbol')!.label)).toContain('$ ');
+    });
+
+    it('should never offer the spelled-out currency name', () => {
+      const labels = getCurrencyDisplayOptions('BRL', 'pt-BR').map(o => o.label.toLowerCase());
+      expect(labels.some(l => l.includes('real'))).toBe(false);
     });
   });
 });

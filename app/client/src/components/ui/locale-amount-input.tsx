@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { NumericFormat, NumberFormatValues, SourceInfo } from 'react-number-format';
 import { useFinance } from '@/contexts/finance-context';
-import { type CurrencyCode } from '@/lib/currency-formatter';
+import { type CurrencyCode, getNumberSeparators, getCurrencyPrecision } from '@/lib/currency-formatter';
 
 interface LocaleAmountInputProps {
   value: string;
@@ -31,73 +31,17 @@ interface LocaleAmountInputProps {
  * - Real-time validation and error feedback
  */
 
-// Locale configuration for different currencies
-const getLocaleConfig = (currency: CurrencyCode) => {
-  const configs = {
-    // US Dollar - 1,234.56
-    USD: {
-      thousandSeparator: ',',
-      decimalSeparator: '.',
-      decimalScale: 2,
-    },
-    // Euro - 1.234,56 (German/Italian style) or 1 234,56 (French style)
-    // Using the more common German/Italian format
-    EUR: {
-      thousandSeparator: '.',
-      decimalSeparator: ',',
-      decimalScale: 2,
-    },
-    // British Pound - 1,234.56
-    GBP: {
-      thousandSeparator: ',',
-      decimalSeparator: '.',
-      decimalScale: 2,
-    },
-    // Brazilian Real - 1.234,56
-    BRL: {
-      thousandSeparator: '.',
-      decimalSeparator: ',',
-      decimalScale: 2,
-    },
-    // Japanese Yen - 1,234 (no decimals)
-    JPY: {
-      thousandSeparator: ',',
-      decimalSeparator: '.',
-      decimalScale: 0,
-    },
-    // Chinese Yuan - 1,234.56
-    CNY: {
-      thousandSeparator: ',',
-      decimalSeparator: '.',
-      decimalScale: 2,
-    },
-    // Mexican Peso - 1,234.56
-    MXN: {
-      thousandSeparator: ',',
-      decimalSeparator: '.',
-      decimalScale: 2,
-    },
-    // Canadian Dollar - 1,234.56
-    CAD: {
-      thousandSeparator: ',',
-      decimalSeparator: '.',
-      decimalScale: 2,
-    },
-    // Australian Dollar - 1,234.56
-    AUD: {
-      thousandSeparator: ',',
-      decimalSeparator: '.',
-      decimalScale: 2,
-    },
-    // Indian Rupee - 1,23,456.78 (but we'll use standard format for simplicity)
-    INR: {
-      thousandSeparator: ',',
-      decimalSeparator: '.',
-      decimalScale: 2,
-    },
+// Separators belong to the locale (EUR is 1,234.56 in en-US and 1.234,56 in
+// de-DE), while the number of decimals belongs to the currency (JPY has none).
+// The old table keyed both off the currency, so a USD user in pt-BR typed into
+// an input that insisted on US punctuation.
+const getLocaleConfig = (currency: CurrencyCode, locale: string) => {
+  const { group, decimal } = getNumberSeparators(locale);
+  return {
+    thousandSeparator: group,
+    decimalSeparator: decimal,
+    decimalScale: getCurrencyPrecision(currency),
   };
-  
-  return configs[currency] || configs.USD;
 };
 
 export const LocaleAmountInput = React.forwardRef<HTMLInputElement, LocaleAmountInputProps>(({
@@ -112,8 +56,8 @@ export const LocaleAmountInput = React.forwardRef<HTMLInputElement, LocaleAmount
   id,
   'data-testid': dataTestId = "locale-amount-input",
 }, ref) => {
-  const { currency } = useFinance();
-  const localeConfig = getLocaleConfig(currency);
+  const { currency, locale } = useFinance();
+  const localeConfig = getLocaleConfig(currency, locale);
   const [isFocused, setIsFocused] = useState(false);
 
   /**

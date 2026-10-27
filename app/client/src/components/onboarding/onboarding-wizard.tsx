@@ -155,7 +155,7 @@ const OnboardingWizard: React.FC<Props> = ({ openSignal }) => {
     });
   };
 
-  const currencyOptions = getCurrencyOptions();
+  const currencyOptions = getCurrencyOptions(selectedLocale, lang);
 
   return (
     <Dialog

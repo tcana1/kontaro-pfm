@@ -1,5 +1,5 @@
 import { supabase, TransactionSplitRow } from '../lib/supabase';
-import { parseCurrency, CurrencyCode } from '../lib/currency-formatter';
+import { parseCurrency, getNumberSeparators } from '../lib/currency-formatter';
 import { localDateString } from '../lib/date-utils';
 
 // Parses a search term into the normalized string + amount/tolerance used by
@@ -8,13 +8,13 @@ import { localDateString } from '../lib/date-utils';
 // distinct-count agree on what a search term means.
 export function parseSearchParams(
   term: string,
-  currency: CurrencyCode
+  locale: string
 ): { normalized: string; amount: number | null; tolerance: number | null } {
   // Strip accents so "Verao" matches "Verão" and vice-versa
   const normalized = term.normalize('NFD').replace(/\p{Mn}/gu, '');
 
   // Use parseCurrency for locale-aware number parsing
-  const numSearchTerm = parseCurrency(term, currency);
+  const numSearchTerm = parseCurrency(term, locale);
   if (numSearchTerm === null) {
     return { normalized, amount: null, tolerance: null };
   }
@@ -24,9 +24,7 @@ export function parseSearchParams(
   // Determine tolerance based on decimal precision in the original search term
   let tolerance = 1; // Default for no decimals
 
-  // Check if the search term contains decimal separator (locale-aware)
-  const usesCommaAsDecimal = currency === 'BRL' || currency === 'EUR';
-  const decimalSeparator = usesCommaAsDecimal ? ',' : '.';
+  const { decimal: decimalSeparator } = getNumberSeparators(locale);
 
   if (term.includes(decimalSeparator)) {
     const decimalPart = term.split(decimalSeparator)[1] || '';
@@ -40,10 +38,10 @@ export function parseSearchParams(
   return { normalized, amount, tolerance };
 }
 
-export function buildSearchConditions(term: string, currency: CurrencyCode): string[] {
+export function buildSearchConditions(term: string, locale: string): string[] {
   const encodeForPostgrest = (s: string) =>
     s.replace(/%/g, '%25').replace(/,/g, '%2C').replace(/\(/g, '%28').replace(/\)/g, '%29');
-  const { normalized, amount, tolerance } = parseSearchParams(term, currency);
+  const { normalized, amount, tolerance } = parseSearchParams(term, locale);
   const encodedNormalized = encodeForPostgrest(normalized);
 
   const conditions: string[] = [
@@ -69,11 +67,11 @@ export function buildSearchConditions(term: string, currency: CurrencyCode): str
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function applyFilters(query: any, filters: Record<string, any>, currency: CurrencyCode): any {
+export function applyFilters(query: any, filters: Record<string, any>, locale: string): any {
   Object.entries(filters).forEach(([key, value]) => {
     if (value === undefined || value === null || (Array.isArray(value) && value.length === 0)) return;
     if (key === 'search') {
-      query = query.or(buildSearchConditions(value, currency).join(','));
+      query = query.or(buildSearchConditions(value, locale).join(','));
     } else if (key === 'status' || key === 'ignored') {
       // handled separately by applyStatusIgnored
     } else if (key === 'categories') {

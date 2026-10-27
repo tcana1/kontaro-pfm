@@ -655,7 +655,9 @@ export type Database = {
       settings: {
         Row: {
           currency: string
+          currency_display: string
           date_format: string
+          hide_cents: boolean
           id: number
           locale: string
           onboarded: boolean
@@ -665,7 +667,9 @@ export type Database = {
         }
         Insert: {
           currency?: string
+          currency_display?: string
           date_format?: string
+          hide_cents?: boolean
           id?: number
           locale?: string
           onboarded?: boolean
@@ -675,7 +679,9 @@ export type Database = {
         }
         Update: {
           currency?: string
+          currency_display?: string
           date_format?: string
+          hide_cents?: boolean
           id?: number
           locale?: string
           onboarded?: boolean

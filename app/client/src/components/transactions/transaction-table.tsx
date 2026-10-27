@@ -200,7 +200,7 @@ const TransactionTable: React.FC<TransactionTableProps> = React.memo(({
   };
   
   const { t } = useTranslation();
-  const { currency, accounts, categories, categoryGroups, locale, dateFormat } =
+  const { accounts, categories, categoryGroups, locale, dateFormat } =
     useFinance();
   const { user } = useAuth();
 
@@ -385,9 +385,10 @@ const TransactionTable: React.FC<TransactionTableProps> = React.memo(({
     offset: (page - 1) * itemsPerPage,
     sortBy: sortField,
     sortDirection: sortDirection,
-    // Currency only affects search parsing; keeping it out of the key otherwise
-    // avoids a duplicate fetch when settings flip the default USD to the real one.
-    currency: search ? currency : undefined,
+    // The locale only affects how a numeric search term is punctuated; keeping it
+    // out of the key otherwise avoids a duplicate fetch when settings flip the
+    // default en-US to the real one.
+    locale: search ? locale : undefined,
   });
 
   // Notify parent of loading state changes

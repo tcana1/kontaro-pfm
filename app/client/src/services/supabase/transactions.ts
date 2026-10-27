@@ -1,5 +1,4 @@
 import { supabase, TransactionSplitRow } from '../../lib/supabase';
-import { CurrencyCode } from '../../lib/currency-formatter';
 import { localDateString } from '../../lib/date-utils';
 import {
   applyFilters,
@@ -16,7 +15,7 @@ export interface QueryOptions {
   offset?: number;
   sortBy?: string;
   sortDirection?: 'asc' | 'desc';
-  currency?: CurrencyCode;
+  locale?: string;
 }
 
 // TransactionSplitRow after transformRow mapping: transaction_id → id, amount number → string, observation → notes
@@ -50,8 +49,8 @@ export async function getReconciledTransactionIds(ids: number[]): Promise<number
 async function fetchDistinctTransactionCount(options: QueryOptions): Promise<number | null> {
   try {
     const filters = options.filters ?? {};
-    const currency = options.currency || 'USD';
-    const searchParams = filters.search ? parseSearchParams(filters.search, currency) : null;
+    const locale = options.locale || 'en-US';
+    const searchParams = filters.search ? parseSearchParams(filters.search, locale) : null;
     const dateFrom = filters.dateRange?.from;
     const dateTo = filters.dateRange?.to;
     const { data, error } = await supabase.rpc('count_filtered_transactions', {
@@ -78,8 +77,8 @@ export async function getTransactions(options: QueryOptions = {}): Promise<{ dat
     .select(`*`, { count: 'exact' });
 
   if (options.filters) {
-    const currency = options.currency || 'USD';
-    query = applyFilters(query, options.filters, currency);
+    const locale = options.locale || 'en-US';
+    query = applyFilters(query, options.filters, locale);
     query = applyStatusIgnored(query, options.filters);
   }
 
