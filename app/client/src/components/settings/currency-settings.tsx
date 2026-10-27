@@ -118,7 +118,7 @@ const CurrencySettings: React.FC = () => {
           )}
         </div>
         <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-          {t('Every option below is shown in the format it produces, and changes are saved as you make them. Picking a currency suggests a number format and symbol; change either one to override it.')}
+          {t('Every option below is shown in the format. Picking a currency suggests a number format and symbol; change either one to override it.')}
         </p>
       </div>
 

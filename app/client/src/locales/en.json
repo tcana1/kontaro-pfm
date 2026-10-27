@@ -384,7 +384,7 @@
   "Error toggling connector": "",
   "Error updating connector": "",
   "Error updating mapping": "",
-  "Every option below is shown in the format it produces, and changes are saved as you make them. Picking a currency suggests a number format and symbol; change either one to override it.": "",
+  "Every option below is shown in the format. Picking a currency suggests a number format and symbol; change either one to override it.": "",
   "Example: Itaú Visa + Itaú Mastercard. Open one PDF and find a word that only appears in it (e.g. \"Visa\" or \"Mastercard\"). Create two rules with that as the text pattern. The importer searches for that text in the file content.": "",
   "Excl. {{name}}": "",
   "Expand all": "",

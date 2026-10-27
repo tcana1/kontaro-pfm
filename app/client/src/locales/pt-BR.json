@@ -416,7 +416,7 @@
   "Error toggling connector": "Erro ao alternar conector",
   "Error updating connector": "Erro ao atualizar conector",
   "Error updating mapping": "Erro ao atualizar mapeamento",
-  "Every option below is shown in the format it produces, and changes are saved as you make them. Picking a currency suggests a number format and symbol; change either one to override it.": "Cada opção abaixo é exibida no formato que produz, e as alterações são salvas automaticamente. Escolher uma moeda sugere um formato de número e um símbolo; altere qualquer um deles para sobrescrever.",
+  "Every option below is shown in the format. Picking a currency suggests a number format and symbol; change either one to override it.": "Cada opção abaixo é exibida no formato. Escolher uma moeda sugere um formato de número e um símbolo; altere qualquer um deles para sobrescrever.",
   "Example: Itaú Visa + Itaú Mastercard. Open one PDF and find a word that only appears in it (e.g. \"Visa\" or \"Mastercard\"). Create two rules with that as the text pattern. The importer searches for that text in the file content.": "Exemplo: Itaú Visa + Itaú Mastercard. Abra um PDF e encontre uma palavra que só apareça nele (ex.: \"Visa\" ou \"Mastercard\"). Crie duas regras com essa palavra como padrão de texto. O importador procura esse texto no conteúdo do arquivo.",
   "Excl. {{name}}": "Excl. {{name}}",
   "Expand all": "Expandir tudo",
