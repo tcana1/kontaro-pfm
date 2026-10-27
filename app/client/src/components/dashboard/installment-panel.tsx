@@ -169,7 +169,7 @@ export default function InstallmentPanel({ selectedMonth }: Props) {
                 label={t('Active ({{count}} series)', { count: active.length })}
                 items={active}
                 total={totalActive}
-                totalSuffix="/mo"
+                totalSuffix={t('/mo')}
                 showProgress
               />
             )}
@@ -181,7 +181,7 @@ export default function InstallmentPanel({ selectedMonth }: Props) {
               <div className="flex justify-between items-center border-t border-gray-100 dark:border-gray-700 pt-2">
                 <span className="text-xs font-medium text-gray-500 dark:text-gray-400">{t('Net change next month')}</span>
                 <span className={`text-sm font-medium tabular-nums ${netBurdenChange < 0 ? 'text-emerald-600 dark:text-emerald-400' : netBurdenChange > 0 ? 'text-amber-500' : 'text-gray-500'}`}>
-                  {netBurdenChange > 0 ? '+' : ''}{money(netBurdenChange, { precision: 0 })}/mo
+                  {netBurdenChange > 0 ? '+' : ''}{money(netBurdenChange, { precision: 0 })}{t('/mo')}
                 </span>
               </div>
             )}
