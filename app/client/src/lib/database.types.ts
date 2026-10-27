@@ -655,7 +655,9 @@ export type Database = {
       settings: {
         Row: {
           currency: string
+          currency_display: string
           date_format: string
+          hide_cents: boolean
           id: number
           locale: string
           onboarded: boolean
@@ -665,7 +667,9 @@ export type Database = {
         }
         Insert: {
           currency?: string
+          currency_display?: string
           date_format?: string
+          hide_cents?: boolean
           id?: number
           locale?: string
           onboarded?: boolean
@@ -675,7 +679,9 @@ export type Database = {
         }
         Update: {
           currency?: string
+          currency_display?: string
           date_format?: string
+          hide_cents?: boolean
           id?: number
           locale?: string
           onboarded?: boolean
@@ -1298,7 +1304,10 @@ export type Database = {
         Returns: Json
       }
       get_dashboard_installments: { Args: { p_month: string }; Returns: Json }
-      get_dashboard_monthly_totals: { Args: { p_month: string }; Returns: Json }
+      get_dashboard_monthly_totals: {
+        Args: { p_month: string; p_today?: string }
+        Returns: Json
+      }
       get_dashboard_surprises: {
         Args: {
           p_baseline_months?: number

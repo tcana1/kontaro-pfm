@@ -10,10 +10,10 @@ import { Button } from '@/components/ui/button';
 import { CurrencyCode, getCurrencyOptions } from '@/lib/currency-formatter';
 
 const LocaleSelector: React.FC = () => {
-  const { currency, setCurrency } = useFinance();
+  const { currency, locale, setCurrency } = useFinance();
   const [isOpen, setIsOpen] = useState(false);
-  
-  const currencyOptions = getCurrencyOptions();
+
+  const currencyOptions = getCurrencyOptions(locale);
   
   const handleSelectCurrency = (newCurrency: CurrencyCode) => {
     setCurrency(newCurrency);

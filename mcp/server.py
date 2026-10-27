@@ -247,8 +247,17 @@ async def get_monthly_totals(month: str) -> Any:
     month must be the first day of the month in YYYY-MM-DD format (e.g. '2025-08-01').
 
     Income categories are excluded: this is spending, not a savings balance. current_net,
-    prior_net and prior_year_net are positive = spent, net of reimbursements. current_gross
-    and current_reimbursements break the current month's net into its two parts.
+    prior_net and prior_year_net are positive = spent, net of reimbursements, and always
+    cover whole calendar months. current_gross and current_reimbursements break the current
+    month's net into its two parts.
+
+    When `month` is the month in progress the response also carries an equal-elapsed-days
+    comparison: mtd_net, prior_mtd_net and prior_year_mtd_net each cover day 1 through
+    comparison_through (comparison_days days), so a half-finished month is not compared
+    against two whole ones. These fields are null for a closed month. Use them for MoM/YoY
+    percentages on an open month; use *_net for the month's actual totals. Do not mix the
+    two families in one comparison.
+
     For a savings balance (income minus expenses) use get_income_vs_expenses; for the full
     month snapshot with averages and YoY use get_month_close.
     """

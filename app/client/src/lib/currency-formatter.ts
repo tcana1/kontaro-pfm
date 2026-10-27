@@ -38,6 +38,12 @@ export const getDefaultLocaleForCurrency = (currencyCode: CurrencyCode): string 
   return (currencyConfigs[currencyCode] || currencyConfigs.USD).locale;
 };
 
+// Decimal count really is a currency property, unlike punctuation: JPY has no
+// minor unit in any locale.
+export const getCurrencyPrecision = (currencyCode: CurrencyCode): number => {
+  return (currencyConfigs[currencyCode] || currencyConfigs.USD).precision;
+};
+
 export const roundDown = (
   amount: number,
   decimals = 0
@@ -74,21 +80,29 @@ export const formatNumber = (
   return new Intl.NumberFormat(locale, options).format(amount);
 };
 
+// Punctuation belongs to the locale, never to the currency: EUR reads 1,234.56
+// in en-US and 1.234,56 in de-DE. Deriving it from the currency is what made
+// "45,90" parse as 4590 for a USD user whose locale is pt-BR.
+export const getNumberSeparators = (locale: string): { group: string; decimal: string } => {
+  const parts = new Intl.NumberFormat(locale).formatToParts(123456.7);
+  return {
+    group: parts.find(p => p.type === 'group')?.value ?? ',',
+    decimal: parts.find(p => p.type === 'decimal')?.value ?? '.',
+  };
+};
+
 export const parseCurrency = (
   value: string,
-  currencyCode: CurrencyCode = 'USD'
+  locale: string = 'en-US'
 ): number | null => {
-  const usesCommaAsDecimal = currencyCode === 'BRL' || currencyCode === 'EUR';
+  const { decimal } = getNumberSeparators(locale);
 
-  // Remove everything that is not a digit, a comma, a dot or a minus sign.
+  // Drop the currency marker and any grouping mark the locale might use —
+  // including de-CH's apostrophe and fr-FR's narrow no-break space.
   let cleanValue = value.replace(/[^0-9.,-]/g, '');
-
-  if (usesCommaAsDecimal) {
-    // For BRL/EUR, remove dots (thousands separators) and then replace comma (decimal) with a dot.
-    cleanValue = cleanValue.replace(/\./g, '').replace(',', '.');
-  } else {
-    // For USD and others, remove commas (thousands separators). The dot is already the decimal separator.
-    cleanValue = cleanValue.replace(/,/g, '');
+  cleanValue = cleanValue.split(decimal === ',' ? '.' : ',').join('');
+  if (decimal !== '.') {
+    cleanValue = cleanValue.replace(decimal, '.');
   }
 
   const result = parseFloat(cleanValue);
@@ -99,17 +113,56 @@ export const parseCurrency = (
 // 0.1+0.2 = 0.30000000000000004) from leaking into displayed or persisted sums.
 export const roundCents = (n: number): number => Math.round((n + Number.EPSILON) * 100) / 100;
 
-export const getCurrencyOptions = (): { value: CurrencyCode; label: string }[] => {
-  return [
-    { value: 'USD', label: 'USD ($) - US Dollar' },
-    { value: 'EUR', label: 'EUR (€) - Euro' },
-    { value: 'GBP', label: 'GBP (£) - British Pound' },
-    { value: 'JPY', label: 'JPY (¥) - Japanese Yen' },
-    { value: 'CNY', label: 'CNY (¥) - Chinese Yuan' },
-    { value: 'BRL', label: 'BRL (R$) - Brazilian Real' },
-    { value: 'MXN', label: 'MXN ($) - Mexican Peso' },
-    { value: 'CAD', label: 'CAD ($) - Canadian Dollar' },
-    { value: 'AUD', label: 'AUD ($) - Australian Dollar' },
-    { value: 'INR', label: 'INR (₹) - Indian Rupee' },
-  ];
+// Every option in the formatting settings is rendered by the same formatter the
+// rest of the app uses, so the label IS the sample and can never claim a format
+// the app will not produce. A static "CAD ($)" lied: under en-US the app shows
+// CA$, and under pt-BR USD shows US$.
+const SAMPLE_AMOUNT = 1234.56;
+
+// Grouping only differs above six digits (en-IN's lakh), so the number-format
+// sample needs to be wider than the currency one.
+const SAMPLE_GROUPED = 123456.78;
+
+export const getCurrencyOptions = (
+  locale: string,
+  language: string = locale
+): { value: CurrencyCode; label: string }[] => {
+  const names = new Intl.DisplayNames([language], { type: 'currency' });
+  return (Object.keys(currencyConfigs) as CurrencyCode[]).map(value => ({
+    value,
+    label: `${value} — ${formatMoney(SAMPLE_AMOUNT, { currency: value, locale })} · ${names.of(value) ?? value}`,
+  }));
+};
+
+// The picker used to list 13 locales by name, but they collapse into only three
+// distinct punctuations — ten of the options rendered identically. Offer the
+// punctuation itself instead; the locale stays the stored value.
+const NUMBER_FORMAT_LOCALES = ['en-US', 'pt-BR', 'fr-FR', 'de-CH', 'en-IN'];
+
+export const getNumberFormatOptions = (current?: string): { value: string; label: string }[] => {
+  const bySample = new Map<string, string>();
+  for (const candidate of NUMBER_FORMAT_LOCALES) {
+    const sample = new Intl.NumberFormat(candidate).format(SAMPLE_GROUPED);
+    if (!bySample.has(sample)) bySample.set(sample, candidate);
+  }
+  // Keep whatever is stored as the value for its punctuation, so a locale that
+  // merely renders the same (es-ES vs pt-BR) is not silently rewritten.
+  if (current) {
+    bySample.set(new Intl.NumberFormat(current).format(SAMPLE_GROUPED), current);
+  }
+  return Array.from(bySample, ([label, value]) => ({ value, label }));
+};
+
+// Deliberately omits Intl's 'name' display: spelling the currency out belongs in
+// the currency picker, not in every amount on screen.
+export const getCurrencyDisplayOptions = (
+  currency: CurrencyCode,
+  locale: string
+): { value: CurrencyDisplay; label: string }[] => {
+  const byLabel = new Map<string, CurrencyDisplay>();
+  for (const display of ['symbol', 'narrowSymbol', 'code', 'none'] as CurrencyDisplay[]) {
+    const label = formatMoney(SAMPLE_AMOUNT, { currency, locale, currencyDisplay: display });
+    if (!byLabel.has(label)) byLabel.set(label, display);
+  }
+  return Array.from(byLabel, ([label, value]) => ({ value, label }));
 };

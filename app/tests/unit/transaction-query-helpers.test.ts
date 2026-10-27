@@ -4,7 +4,7 @@ import { buildSearchConditions, resolveColumnName, transformRow } from '../../cl
 describe('buildSearchConditions', () => {
   describe('text conditions', () => {
     it('always includes 6 unaccented ilike conditions', () => {
-      const result = buildSearchConditions('cafe', 'USD');
+      const result = buildSearchConditions('cafe', 'en-US');
       const textConditions = result.filter(c => c.includes('ilike'));
       expect(textConditions).toHaveLength(6);
       expect(textConditions[0]).toBe('payee_unaccented.ilike.%cafe%');
@@ -12,30 +12,30 @@ describe('buildSearchConditions', () => {
     });
 
     it('strips accents from search term', () => {
-      const result = buildSearchConditions('Verão', 'USD');
+      const result = buildSearchConditions('Verão', 'en-US');
       expect(result[0]).toBe('payee_unaccented.ilike.%Verao%');
     });
 
     it('encodes PostgREST special chars: percent in term becomes %25', () => {
-      const result = buildSearchConditions('50%', 'USD');
+      const result = buildSearchConditions('50%', 'en-US');
       // The % in the search term is encoded; the surrounding % in ilike pattern are not
       expect(result[0]).toBe('payee_unaccented.ilike.%50%25%');
     });
 
     it('encodes PostgREST special chars: comma and parens', () => {
-      const result = buildSearchConditions('a,b(c)', 'USD');
+      const result = buildSearchConditions('a,b(c)', 'en-US');
       expect(result[0]).toBe('payee_unaccented.ilike.%a%2Cb%28c%29%');
     });
   });
 
-  describe('numeric conditions (USD)', () => {
+  describe('numeric conditions (dot-decimal locale)', () => {
     it('non-numeric term produces no amount conditions', () => {
-      const result = buildSearchConditions('cafe', 'USD');
+      const result = buildSearchConditions('cafe', 'en-US');
       expect(result.filter(c => c.startsWith('and('))).toHaveLength(0);
     });
 
     it('whole number → tolerance 1', () => {
-      const result = buildSearchConditions('30', 'USD');
+      const result = buildSearchConditions('30', 'en-US');
       const amountConds = result.filter(c => c.startsWith('and('));
       expect(amountConds).toHaveLength(4);
       expect(amountConds[0]).toBe('and(amount.gte.29,amount.lte.31)');
@@ -43,39 +43,39 @@ describe('buildSearchConditions', () => {
     });
 
     it('one decimal place → tolerance 0.1', () => {
-      const result = buildSearchConditions('29.9', 'USD');
+      const result = buildSearchConditions('29.9', 'en-US');
       const amountConds = result.filter(c => c.startsWith('and('));
       expect(amountConds[0]).toBe('and(amount.gte.29.8,amount.lte.30)');
     });
 
     it('two decimal places → tolerance 0.001', () => {
-      const result = buildSearchConditions('29.95', 'USD');
+      const result = buildSearchConditions('29.95', 'en-US');
       const amountConds = result.filter(c => c.startsWith('and('));
       expect(amountConds[0]).toBe('and(amount.gte.29.949,amount.lte.29.951)');
     });
 
     it('covers both amount and transaction_amount fields', () => {
-      const result = buildSearchConditions('10', 'USD');
+      const result = buildSearchConditions('10', 'en-US');
       const amountConds = result.filter(c => c.startsWith('and('));
       expect(amountConds.some(c => c.includes('transaction_amount'))).toBe(true);
     });
   });
 
-  describe('numeric conditions (BRL — comma as decimal)', () => {
-    it('whole number in BRL → tolerance 1', () => {
-      const result = buildSearchConditions('30', 'BRL');
+  describe('numeric conditions (comma-decimal locale)', () => {
+    it('whole number in a comma-decimal locale → tolerance 1', () => {
+      const result = buildSearchConditions('30', 'pt-BR');
       const amountConds = result.filter(c => c.startsWith('and('));
       expect(amountConds[0]).toBe('and(amount.gte.29,amount.lte.31)');
     });
 
-    it('comma decimal in BRL → tolerance 0.001', () => {
-      const result = buildSearchConditions('29,95', 'BRL');
+    it('comma decimal → tolerance 0.001', () => {
+      const result = buildSearchConditions('29,95', 'pt-BR');
       const amountConds = result.filter(c => c.startsWith('and('));
       expect(amountConds[0]).toBe('and(amount.gte.29.949,amount.lte.29.951)');
     });
 
-    it('one comma decimal place in BRL → tolerance 0.1', () => {
-      const result = buildSearchConditions('29,9', 'BRL');
+    it('one comma decimal place → tolerance 0.1', () => {
+      const result = buildSearchConditions('29,9', 'pt-BR');
       const amountConds = result.filter(c => c.startsWith('and('));
       expect(amountConds[0]).toBe('and(amount.gte.29.8,amount.lte.30)');
     });

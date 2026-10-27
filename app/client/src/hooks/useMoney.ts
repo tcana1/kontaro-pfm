@@ -7,11 +7,11 @@ type MoneyOverrides = Pick<MoneyFormat, 'currencyDisplay' | 'hideCents' | 'preci
 // Single entry point for rendering money, so every screen picks up the user's
 // currency and locale without each component wiring them up by hand.
 export const useMoney = () => {
-  const { currency, locale } = useFinance();
+  const { currency, locale, currencyDisplay, hideCents } = useFinance();
 
   return useCallback(
     (amount: number, overrides?: MoneyOverrides) =>
-      formatMoney(amount, { currency, locale, ...overrides }),
-    [currency, locale]
+      formatMoney(amount, { currency, locale, currencyDisplay, hideCents, ...overrides }),
+    [currency, locale, currencyDisplay, hideCents]
   );
 };

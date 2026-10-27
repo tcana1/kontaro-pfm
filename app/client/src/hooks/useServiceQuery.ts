@@ -1,6 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabaseService } from '@/services/supabase-service';
-import { CurrencyCode } from '@/lib/currency-formatter';
 
 interface QueryOptions {
   filters?: Record<string, any>;
@@ -8,7 +7,7 @@ interface QueryOptions {
   offset?: number;
   sortBy?: string;
   sortDirection?: 'asc' | 'desc';
-  currency?: CurrencyCode;
+  locale?: string;
   rawQuery?: boolean;
   queryParams?: Record<string, any>;
   options?: {

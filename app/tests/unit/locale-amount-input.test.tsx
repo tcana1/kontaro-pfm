@@ -26,6 +26,7 @@ describe('LocaleAmountInput with react-number-format', () => {
     beforeEach(() => {
       mockUseFinance.mockReturnValue({
         currency: 'BRL',
+        locale: 'pt-BR',
         accounts: [],
         categories: [],
         categoryGroups: [],
@@ -101,6 +102,7 @@ describe('LocaleAmountInput with react-number-format', () => {
     beforeEach(() => {
       mockUseFinance.mockReturnValue({
         currency: 'USD',
+        locale: 'en-US',
         accounts: [],
         categories: [],
         categoryGroups: [],
@@ -139,6 +141,7 @@ describe('LocaleAmountInput with react-number-format', () => {
     beforeEach(() => {
       mockUseFinance.mockReturnValue({
         currency: 'EUR',
+        locale: 'de-DE',
         accounts: [],
         categories: [],
         categoryGroups: [],
@@ -220,6 +223,7 @@ describe('LocaleAmountInput with react-number-format', () => {
     beforeEach(() => {
       mockUseFinance.mockReturnValue({
         currency: 'BRL',
+        locale: 'pt-BR',
         accounts: [],
         categories: [],
         categoryGroups: [],
@@ -258,6 +262,7 @@ describe('LocaleAmountInput with react-number-format', () => {
     beforeEach(() => {
       mockUseFinance.mockReturnValue({
         currency: 'BRL',
+        locale: 'pt-BR',
         accounts: [],
         categories: [],
         categoryGroups: [],
@@ -309,6 +314,7 @@ describe('LocaleAmountInput with react-number-format', () => {
       // Test with Brazilian locale (comma input)
       mockUseFinance.mockReturnValue({
         currency: 'BRL',
+        locale: 'pt-BR',
         accounts: [],
         categories: [],
         categoryGroups: [],
@@ -330,6 +336,7 @@ describe('LocaleAmountInput with react-number-format', () => {
     it('should show "0,00" placeholder for Brazilian locale', () => {
       mockUseFinance.mockReturnValue({
         currency: 'BRL',
+        locale: 'pt-BR',
         accounts: [],
         categories: [],
         categoryGroups: [],
@@ -345,6 +352,7 @@ describe('LocaleAmountInput with react-number-format', () => {
     it('should show "0.00" placeholder for US locale', () => {
       mockUseFinance.mockReturnValue({
         currency: 'USD',
+        locale: 'en-US',
         accounts: [],
         categories: [],
         categoryGroups: [],
@@ -375,6 +383,7 @@ describe('LocaleAmountInput with react-number-format', () => {
     it('should use custom placeholder when provided', () => {
       mockUseFinance.mockReturnValue({
         currency: 'BRL',
+        locale: 'pt-BR',
         accounts: [],
         categories: [],
         categoryGroups: [],
@@ -392,6 +401,7 @@ describe('LocaleAmountInput with react-number-format', () => {
     beforeEach(() => {
       mockUseFinance.mockReturnValue({
         currency: 'BRL',
+        locale: 'pt-BR',
         accounts: [],
         categories: [],
         categoryGroups: [],
