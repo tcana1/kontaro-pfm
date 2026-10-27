@@ -8,7 +8,6 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, LabelList,
 } from 'recharts';
 import { useServiceQuery } from '@/hooks/useServiceQuery';
-import { useFinance } from '@/contexts/finance-context';
 import { useMoney } from '@/hooks/useMoney';
 import { ChartTooltip } from '@/components/ui/chart-tooltip';
 
@@ -32,17 +31,10 @@ interface MonthEvent {
   monthly_amount: number;
 }
 
-interface ProjectedInstallment extends MonthEvent {
-  paid: number;
-  last_pay: string;
-}
-
 interface InstallmentData {
   active: InstallmentSeries[];
   ending_this_month: MonthEvent[];
   starting_this_month: MonthEvent[];
-  due_this_month: ProjectedInstallment[];
-  due_this_month_total: number;
 }
 
 interface TimelineEntry {
@@ -148,7 +140,6 @@ function ExpandableSection({ label, items, total, totalSuffix, showInstallmentCo
 export default function InstallmentPanel({ selectedMonth }: Props) {
   const { t } = useTranslation();
   const dateLocale = useDateFnsLocale();
-  const { showInstallmentProjection } = useFinance();
   const money = useMoney();
   const monthKey = format(selectedMonth, 'yyyy-MM');
 
@@ -163,8 +154,6 @@ export default function InstallmentPanel({ selectedMonth }: Props) {
   const active   = data?.active           ?? [];
   const ending   = data?.ending_this_month   ?? [];
   const starting = data?.starting_this_month ?? [];
-  const due      = showInstallmentProjection ? (data?.due_this_month ?? []) : [];
-  const totalDue = showInstallmentProjection ? (data?.due_this_month_total ?? 0) : 0;
 
   const totalActive    = active.reduce((s, a) => s + a.monthly_amount, 0);
   const totalFreed     = ending.reduce((s, e) => s + e.monthly_amount, 0);
@@ -205,14 +194,6 @@ export default function InstallmentPanel({ selectedMonth }: Props) {
                 showProgress
               />
             )}
-
-            {/* paid + 1 because the installment being projected is the next one in the series */}
-            <ExpandableSection
-              label={t('Projected this month ({{count}})', { count: due.length })}
-              items={due.map(d => ({ ...d, paid: d.paid + 1 }))}
-              total={totalDue}
-              showProgress
-            />
 
             <ExpandableSection label={t('Ending this month')} items={[...ending].sort((a, b) => b.monthly_amount - a.monthly_amount)} total={totalFreed} showInstallmentCount />
             <ExpandableSection label={t('Starting this month')} items={[...starting].sort((a, b) => b.monthly_amount - a.monthly_amount)} total={totalNewBurden} showInstallmentCount />
