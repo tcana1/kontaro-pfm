@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { Pencil, Check, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import LanguageSettings from '@/components/settings/language-settings';
@@ -21,7 +22,7 @@ const IMPORTER_URL = getImporterUrl();
 const ProfileSettings: React.FC = () => {
   const { t } = useTranslation();
   const { user, updateProfile, updatePassword } = useAuth();
-  const { locale } = useFinance();
+  const { locale, showInstallmentProjection, setShowInstallmentProjection } = useFinance();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -321,6 +322,23 @@ const ProfileSettings: React.FC = () => {
 
       {/* Currency, locale & date format */}
       <CurrencySettings />
+
+      <Separator />
+
+      {/* Installment projection */}
+      <div className="flex items-start justify-between gap-6 max-w-xl">
+        <div>
+          <h2 className="text-lg font-medium">{t('Installment Projection')}</h2>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+            {t('Show the installments your card bill is expected to charge this month but the bank has not reported yet. Projected amounts are shown separately and never counted as actual transactions.')}
+          </p>
+        </div>
+        <Switch
+          checked={showInstallmentProjection}
+          onCheckedChange={setShowInstallmentProjection}
+          aria-label={t('Installment Projection')}
+        />
+      </div>
 
       <Separator />
 

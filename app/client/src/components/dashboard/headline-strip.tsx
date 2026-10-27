@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { format } from 'date-fns';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { useServiceQuery } from '@/hooks/useServiceQuery';
+import { useFinance } from '@/contexts/finance-context';
 import { useMoney } from '@/hooks/useMoney';
 
 interface Props {
@@ -13,6 +14,7 @@ interface MonthlyTotals {
   current_net: number;
   prior_net: number;
   prior_year_net: number;
+  projected_installments: number;
 }
 
 function DeltaBadge({ value, label }: { value: number; label: string }) {
@@ -40,6 +42,7 @@ function DeltaBadge({ value, label }: { value: number; label: string }) {
 
 export default function HeadlineStrip({ selectedMonth }: Props) {
   const { t } = useTranslation();
+  const { showInstallmentProjection } = useFinance();
   const money = useMoney();
   const monthKey = format(selectedMonth, 'yyyy-MM');
 
@@ -54,6 +57,7 @@ export default function HeadlineStrip({ selectedMonth }: Props) {
   const current    = data?.current_net    ?? 0;
   const prior      = data?.prior_net      ?? 0;
   const priorYear  = data?.prior_year_net ?? 0;
+  const projected  = showInstallmentProjection ? (data?.projected_installments ?? 0) : 0;
 
   const momDelta = prior > 0 ? (current - prior) / prior : null;
   const yoyDelta = priorYear > 0 ? (current - priorYear) / priorYear : null;
@@ -66,9 +70,19 @@ export default function HeadlineStrip({ selectedMonth }: Props) {
         {isLoading ? (
           <div className="mt-2 h-9 w-36 bg-gray-100 dark:bg-gray-700 rounded animate-pulse" />
         ) : (
-          <p className="mt-2 text-xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100 tabular-nums">
-            {money(current, { precision: 0 })}
-          </p>
+          <>
+            <p className="mt-2 text-xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100 tabular-nums">
+              {money(current, { precision: 0 })}
+            </p>
+            {projected > 0 && (
+              <p
+                className="mt-1 text-sm text-gray-500 dark:text-gray-400 tabular-nums"
+                title={t('Installments the open card bill should charge this month, not yet reported by the bank')}
+              >
+                {t('+{{amount}} projected', { amount: money(projected, { precision: 0 }) })}
+              </p>
+            )}
+          </>
         )}
       </div>
 

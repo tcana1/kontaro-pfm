@@ -129,6 +129,11 @@ Conventions
 - Transaction status (pending/cleared, reconciled or not) does not change any total. Do not
   caveat an analysis because of it.
 - Dates: aggregate tools take YYYY-MM-DD (a month = its first day). Insight runs take YYYY-MM.
+- PROJECTION: the bank does not report the installments of a card bill that is still open, so
+  get_month_close returns a `projection` block (and get_installments a `due_this_month` bucket)
+  with the installments each series is expected to be charged this month. These are inferred,
+  not stored, and are NOT part of any total. Never add them into net/gross; quote them
+  separately as "expected to still land" when the month is not closed yet.
 
 Monthly analysis workflow (the monthly_analysis prompt has the full text)
 1. whoami(), then get_analysis_state() and get_insight_run(previous month) for learned context.
@@ -402,6 +407,8 @@ async def get_month_close(month: str) -> Any:
     One-call snapshot of a month, month = YYYY-MM-DD (first day). Returns gross,
     reimbursements and net spending for the month, the prior month and the same month
     last year, the MoM / YoY deltas, and the trailing 3-month average of net.
+    Also returns a `projection` block: installments an open card bill is expected to
+    charge this month that the bank has not reported yet. Inferred, not in the totals.
     Start the analysis here instead of stitching several tools together.
     """
     return await _rpc("get_month_close", {"p_month": month})
@@ -410,8 +417,10 @@ async def get_month_close(month: str) -> Any:
 @mcp.tool()
 async def get_installments(month: str) -> Any:
     """
-    Installment series for a month (YYYY-MM-DD, first day): active, ending this month
-    and starting this month. Use it for the installment tracker and the outlook.
+    Installment series for a month (YYYY-MM-DD, first day): active, stalled, ending this
+    month, starting this month, and `due_this_month` — series owed an installment this
+    month that has not been reported yet (inferred, not stored). Use it for the
+    installment tracker and the outlook.
     """
     return await _rpc("get_dashboard_installments", {"p_month": month})
 

@@ -8,6 +8,7 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, LabelList,
 } from 'recharts';
 import { useServiceQuery } from '@/hooks/useServiceQuery';
+import { useFinance } from '@/contexts/finance-context';
 import { useMoney } from '@/hooks/useMoney';
 import { ChartTooltip } from '@/components/ui/chart-tooltip';
 
@@ -31,10 +32,17 @@ interface MonthEvent {
   monthly_amount: number;
 }
 
+interface ProjectedInstallment extends MonthEvent {
+  paid: number;
+  last_pay: string;
+}
+
 interface InstallmentData {
   active: InstallmentSeries[];
   ending_this_month: MonthEvent[];
   starting_this_month: MonthEvent[];
+  due_this_month: ProjectedInstallment[];
+  due_this_month_total: number;
 }
 
 interface TimelineEntry {
@@ -63,6 +71,25 @@ function buildTimeline(active: InstallmentSeries[], fromMonth: Date, dateLocale:
   });
 }
 
+// The panel shows whole units, and rounding each line on its own makes the visible
+// lines disagree with the section total (sum of roundings != rounding of the sum).
+// Largest remainder instead: floor every line, then hand the leftover units to the
+// biggest fractions, so the lines always add up to the total displayed above them.
+function apportion(values: number[], total: number): number[] {
+  const out = values.map(Math.floor);
+  let leftover = Math.round(total) - out.reduce((sum, v) => sum + v, 0);
+  const byFraction = values
+    .map((v, i) => ({ i, fraction: v - Math.floor(v) }))
+    .sort((a, b) => b.fraction - a.fraction);
+
+  for (const { i } of byFraction) {
+    if (leftover <= 0) break;
+    out[i] += 1;
+    leftover -= 1;
+  }
+  return out;
+}
+
 interface ExpandableSectionProps {
   label: string;
   items: Array<MonthEvent & { remaining?: number; paid?: number }>;
@@ -76,6 +103,8 @@ function ExpandableSection({ label, items, total, totalSuffix, showInstallmentCo
   const money = useMoney();
   const [open, setOpen] = useState(false);
   if (items.length === 0) return null;
+
+  const displayAmounts = apportion(items.map(i => i.monthly_amount), total);
 
   return (
     <div>
@@ -102,10 +131,10 @@ function ExpandableSection({ label, items, total, totalSuffix, showInstallmentCo
               <span className="text-xs text-gray-500 dark:text-gray-400 truncate">{item.payee}</span>
               <span className="text-xs tabular-nums text-gray-500 dark:text-gray-400 flex-shrink-0">
                 {showProgress && item.paid != null && item.installment_total > 0
-                  ? <><span className="text-gray-400 dark:text-gray-500 mr-1.5">{item.paid}/{item.installment_total}</span>{money(item.monthly_amount, { precision: 0 })}</>
+                  ? <><span className="text-gray-400 dark:text-gray-500 mr-1.5">{item.paid}/{item.installment_total}</span>{money(displayAmounts[i], { precision: 0 })}</>
                   : showInstallmentCount && item.installment_total > 0
-                  ? `${item.installment_total}x ${money(item.monthly_amount, { precision: 0 })}`
-                  : money(item.monthly_amount, { precision: 0 })
+                  ? `${item.installment_total}x ${money(displayAmounts[i], { precision: 0 })}`
+                  : money(displayAmounts[i], { precision: 0 })
                 }
               </span>
             </div>
@@ -119,6 +148,7 @@ function ExpandableSection({ label, items, total, totalSuffix, showInstallmentCo
 export default function InstallmentPanel({ selectedMonth }: Props) {
   const { t } = useTranslation();
   const dateLocale = useDateFnsLocale();
+  const { showInstallmentProjection } = useFinance();
   const money = useMoney();
   const monthKey = format(selectedMonth, 'yyyy-MM');
 
@@ -133,6 +163,8 @@ export default function InstallmentPanel({ selectedMonth }: Props) {
   const active   = data?.active           ?? [];
   const ending   = data?.ending_this_month   ?? [];
   const starting = data?.starting_this_month ?? [];
+  const due      = showInstallmentProjection ? (data?.due_this_month ?? []) : [];
+  const totalDue = showInstallmentProjection ? (data?.due_this_month_total ?? 0) : 0;
 
   const totalActive    = active.reduce((s, a) => s + a.monthly_amount, 0);
   const totalFreed     = ending.reduce((s, e) => s + e.monthly_amount, 0);
@@ -173,6 +205,14 @@ export default function InstallmentPanel({ selectedMonth }: Props) {
                 showProgress
               />
             )}
+
+            {/* paid + 1 because the installment being projected is the next one in the series */}
+            <ExpandableSection
+              label={t('Projected this month ({{count}})', { count: due.length })}
+              items={due.map(d => ({ ...d, paid: d.paid + 1 }))}
+              total={totalDue}
+              showProgress
+            />
 
             <ExpandableSection label={t('Ending this month')} items={[...ending].sort((a, b) => b.monthly_amount - a.monthly_amount)} total={totalFreed} showInstallmentCount />
             <ExpandableSection label={t('Starting this month')} items={[...starting].sort((a, b) => b.monthly_amount - a.monthly_amount)} total={totalNewBurden} showInstallmentCount />

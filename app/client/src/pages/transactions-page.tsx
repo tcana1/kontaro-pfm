@@ -47,7 +47,7 @@ const TransactionsPageContent: React.FC<TransactionsPageContentProps> = ({ accou
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { user } = useAuth();
-  const { categories, accounts, locale, dateFormat } = useFinance();
+  const { categories, accounts, locale, dateFormat, showInstallmentProjection } = useFinance();
   const money = useMoney();
   const { undo, redo, discardAffecting: discardHistoryAffecting, canUndo, canRedo, execute: originalExecute } = useHistoryContext();
 
@@ -512,18 +512,22 @@ const TransactionsPageContent: React.FC<TransactionsPageContentProps> = ({ accou
 
   useMobilePanel(() => {
     if (!accountId || !mobileBalanceOpen) return null;
+    const projected = showInstallmentProjection ? (mobileBalance?.projectedBalance ?? 0) : 0;
     const items = [
       { label: t('Cleared'), value: mobileBalance?.clearedBalance },
       { label: t('Pending'), value: mobileBalance?.pendingBalance },
       { label: t('Total'),   value: mobileBalance?.totalBalance },
+      ...(projected !== 0
+        ? [{ label: t('Projected'), value: (mobileBalance?.totalBalance ?? 0) + projected }]
+        : []),
     ];
     return (
-      <div className="flex justify-around">
+      <div className="flex justify-between gap-1.5">
         {items.map(({ label, value }) => (
-          <div key={label} className="flex flex-col items-center gap-0.5">
+          <div key={label} className="flex flex-col items-center gap-0.5 min-w-0">
             <span className="text-xs text-gray-500 dark:text-gray-400">{label}</span>
             {value !== undefined ? (
-              <span className={cn('text-sm font-semibold tabular-nums', balanceColor)}>
+              <span className={cn('text-sm font-semibold tabular-nums whitespace-nowrap', balanceColor)}>
                 {money(value)}
               </span>
             ) : (
@@ -533,7 +537,7 @@ const TransactionsPageContent: React.FC<TransactionsPageContentProps> = ({ accou
         ))}
       </div>
     );
-  }, [accountId, mobileBalanceOpen, mobileBalance, balanceColor, money]);
+  }, [accountId, mobileBalanceOpen, mobileBalance, balanceColor, money, showInstallmentProjection]);
 
   return (
     <div className="flex-1 flex flex-col space-y-4 bg-gray-100 dark:bg-gray-900 relative">

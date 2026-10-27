@@ -20,6 +20,7 @@ interface Settings {
   locale: string;
   date_format: string;
   onboarded?: boolean;
+  show_installment_projection?: boolean;
 }
 
 interface FinanceContextType {
@@ -38,6 +39,8 @@ interface FinanceContextType {
   setLocale: (locale: string) => void;
   dateFormat: string;
   setDateFormat: (dateFormat: string) => void;
+  showInstallmentProjection: boolean;
+  setShowInstallmentProjection: (enabled: boolean) => void;
 }
 
 const defaultFinanceContext: FinanceContextType = {
@@ -56,6 +59,8 @@ const defaultFinanceContext: FinanceContextType = {
   setLocale: () => {},
   dateFormat: 'default',
   setDateFormat: () => {},
+  showInstallmentProjection: false,
+  setShowInstallmentProjection: () => {},
 };
 
 const FinanceContext = createContext<FinanceContextType>(defaultFinanceContext);
@@ -75,6 +80,7 @@ export const FinanceProvider: React.FC<FinanceProviderProps> = ({ children }) =>
   const [locale, setLocale] = useState('en-US');
   // Initialize with default, but will be updated from settings
   const [dateFormat, setDateFormat] = useState('DD/MMM/YYYY');
+  const [showInstallmentProjection, setShowInstallmentProjection] = useState(false);
   const creatingSettings = useRef(false);
 
   // Fetch accounts
@@ -164,6 +170,7 @@ export const FinanceProvider: React.FC<FinanceProviderProps> = ({ children }) =>
       setTheme(themeSetting as 'light' | 'dark' | 'system');
       setLocale(localeSetting);
       setDateFormat(dateFormatSetting);
+      setShowInstallmentProjection(settings.show_installment_projection ?? false);
     } else if (!isLoadingSettings && !settingsError && settings === null && isSettingsFetched && user) {
       // Only create initial settings if:
       // 1. Not currently loading
@@ -227,7 +234,7 @@ export const FinanceProvider: React.FC<FinanceProviderProps> = ({ children }) =>
   }, [theme]);
 
   // Update settings when currency/theme/locale changes
-  const updateSettings = async (key: string, value: string) => {
+  const updateSettings = async (key: string, value: string | boolean) => {
     if (!settings) return;
     
     try {
@@ -264,6 +271,12 @@ export const FinanceProvider: React.FC<FinanceProviderProps> = ({ children }) =>
     updateSettings('date_format', newDateFormat);
   };
 
+  // Handle installment projection toggle
+  const handleShowInstallmentProjectionChange = (enabled: boolean) => {
+    setShowInstallmentProjection(enabled);
+    updateSettings('show_installment_projection', enabled);
+  };
+
   const isLoading = isLoadingAccounts || isLoadingCategories || isLoadingCategoryGroups || isLoadingSettings;
   const error = accountsError || categoriesError || categoryGroupsError || settingsError;
 
@@ -283,6 +296,8 @@ export const FinanceProvider: React.FC<FinanceProviderProps> = ({ children }) =>
     setLocale: handleLocaleChange,
     dateFormat,
     setDateFormat: handleDateFormatChange,
+    showInstallmentProjection,
+    setShowInstallmentProjection: handleShowInstallmentProjectionChange,
   };
 
   return (

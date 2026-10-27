@@ -659,6 +659,7 @@ export type Database = {
           id: number
           locale: string
           onboarded: boolean
+          show_installment_projection: boolean
           theme: string
           user_id: string
         }
@@ -668,6 +669,7 @@ export type Database = {
           id?: number
           locale?: string
           onboarded?: boolean
+          show_installment_projection?: boolean
           theme?: string
           user_id: string
         }
@@ -677,6 +679,7 @@ export type Database = {
           id?: number
           locale?: string
           onboarded?: boolean
+          show_installment_projection?: boolean
           theme?: string
           user_id?: string
         }
@@ -1261,6 +1264,7 @@ export type Database = {
           account_type_id: number
           cleared_balance: number
           pending_balance: number
+          projected_balance: number
           starting_balance: number
           total_balance: number
         }[]
@@ -1384,6 +1388,18 @@ export type Database = {
       get_reconciliation_info_for_adjustment: {
         Args: { p_transaction_id: number }
         Returns: Json
+      }
+      get_projected_installments: {
+        Args: { p_month: string }
+        Returns: {
+          account_id: number
+          installment_total: number
+          last_pay: string
+          monthly_amount: number
+          paid: number
+          payee: string
+          purchase_date: string
+        }[]
       }
       get_reimbursements: {
         Args: { p_end: string; p_start: string }
