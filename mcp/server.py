@@ -258,6 +258,13 @@ async def get_monthly_totals(month: str) -> Any:
     percentages on an open month; use *_net for the month's actual totals. Do not mix the
     two families in one comparison.
 
+    projected_installments is the open card bill's inferred installments for the whole
+    month, and projected_mtd the same projection cut to the elapsed-days window (null for
+    a closed month). Neither is part of any total. Because the open bill reports no
+    installment while the comparison months carry theirs, the dashboard adds projected_mtd
+    to mtd_net for the MoM/YoY percentage only: do the same if you quote that percentage,
+    and keep quoting the projection separately from the month's actual spending.
+
     For a savings balance (income minus expenses) use get_income_vs_expenses; for the full
     month snapshot with averages and YoY use get_month_close.
     """

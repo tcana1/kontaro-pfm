@@ -20,6 +20,8 @@ interface MonthlyTotals {
   projected_installments: number;
   // Only for the month in progress: the same number of elapsed days in each
   // month, so a half-finished month is not compared against two whole ones.
+  // projected_mtd is the projection cut to that same window.
+  projected_mtd: number | null;
   mtd_net: number | null;
   prior_mtd_net: number | null;
   prior_year_mtd_net: number | null;
@@ -31,7 +33,7 @@ function rangeLabel(monthStart: Date, days: number, dateLocale: Locale): string 
   return `1–${Math.min(days, getDaysInMonth(monthStart))} ${format(monthStart, 'MMM', { locale: dateLocale })}`;
 }
 
-function DeltaBadge({ value, label }: { value: number; label: string }) {
+function DeltaBadge({ value, label }: { value: number; label?: string }) {
   const { t } = useTranslation();
   const pct = Math.abs(value * 100);
   const formatted = pct < 10 ? pct.toFixed(1) : Math.round(pct).toString();
@@ -40,7 +42,7 @@ function DeltaBadge({ value, label }: { value: number; label: string }) {
     return (
       <span className="flex items-center gap-1 text-sm text-gray-400 dark:text-gray-500">
         <Minus className="h-3.5 w-3.5" />
-        {label}: {t('flat')}
+        {t('flat')}{label ? ` ${label}` : ''}
       </span>
     );
   }
@@ -49,7 +51,7 @@ function DeltaBadge({ value, label }: { value: number; label: string }) {
   return (
     <span className={`flex items-center gap-1 text-sm ${isUp ? 'text-amber-500' : 'text-emerald-500'}`}>
       {isUp ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
-      {label}: {isUp ? '+' : '-'}{formatted}%
+      {isUp ? '+' : '-'}{formatted}%{label ? ` ${label}` : ''}
     </span>
   );
 }
@@ -76,25 +78,36 @@ export default function HeadlineStrip({ selectedMonth }: Props) {
   // The headline keeps showing the whole month; only the deltas switch to the
   // elapsed-days window while the month is still open.
   const proRataDays = data?.comparison_through ? (data.comparison_days ?? 0) : 0;
-  const current   = proRataDays ? (data?.mtd_net            ?? 0) : netSpend;
-  const prior     = proRataDays ? (data?.prior_mtd_net      ?? 0) : (data?.prior_net      ?? 0);
-  const priorYear = proRataDays ? (data?.prior_year_mtd_net ?? 0) : (data?.prior_year_net ?? 0);
+
+  // The open card bill reports no installment, so without the projection the
+  // month in progress is compared short against two months that carry theirs.
+  const projectedInWindow = proRataDays
+    ? (showInstallmentProjection ? (data?.projected_mtd ?? 0) : 0)
+    : projected;
+
+  const current     = proRataDays ? (data?.mtd_net            ?? 0) : netSpend;
+  const prior       = proRataDays ? (data?.prior_mtd_net      ?? 0) : (data?.prior_net      ?? 0);
+  const priorYear   = proRataDays ? (data?.prior_year_mtd_net ?? 0) : (data?.prior_year_net ?? 0);
+  const withProj    = current + projectedInWindow;
+  const hasProj     = projectedInWindow > 0;
 
   const momDelta = prior > 0 ? (current - prior) / prior : null;
   const yoyDelta = priorYear > 0 ? (current - priorYear) / priorYear : null;
+  const momProjDelta = hasProj && prior > 0 ? (withProj - prior) / prior : null;
+  const yoyProjDelta = hasProj && priorYear > 0 ? (withProj - priorYear) / priorYear : null;
 
-  const momTitle = proRataDays
-    ? t('Comparing {{current}} with {{previous}}', {
-        current: rangeLabel(selectedMonth, proRataDays, dateLocale),
-        previous: rangeLabel(subMonths(selectedMonth, 1), proRataDays, dateLocale),
-      })
-    : undefined;
-  const yoyTitle = proRataDays
-    ? t('Comparing {{current}} with {{previous}}', {
-        current: rangeLabel(selectedMonth, proRataDays, dateLocale),
-        previous: rangeLabel(subYears(selectedMonth, 1), proRataDays, dateLocale),
-      })
-    : undefined;
+  const projTitle = t('With the projected installments added to the current window');
+
+  const comparisonTitle = (previousMonth: Date) =>
+    proRataDays
+      ? t('Comparing {{current}} with {{previous}}', {
+          current: rangeLabel(selectedMonth, proRataDays, dateLocale),
+          previous: rangeLabel(previousMonth, proRataDays, dateLocale),
+        })
+      : undefined;
+
+  const momTitle = comparisonTitle(subMonths(selectedMonth, 1));
+  const yoyTitle = comparisonTitle(subYears(selectedMonth, 1));
 
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
@@ -129,10 +142,22 @@ export default function HeadlineStrip({ selectedMonth }: Props) {
           <p className="mt-2 text-lg text-gray-400 dark:text-gray-500">{t('No prior data')}</p>
         ) : (
           <>
-            <p className="mt-2 text-xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100 tabular-nums">
-              {momDelta > 0 ? '+' : ''}{money(current - prior, { precision: 0 })}
-            </p>
-            <DeltaBadge value={momDelta} label={t('MoM')} />
+            <div className="mt-2 grid grid-cols-1 sm:grid-cols-[max-content_max-content] items-baseline gap-x-3 gap-y-1">
+              <p className="text-xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100 tabular-nums">
+                {momDelta > 0 ? '+' : ''}{money(current - prior, { precision: 0 })}
+              </p>
+              <DeltaBadge value={momDelta} label={t('MoM')} />
+              {momProjDelta !== null && (
+                <>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 tabular-nums" title={projTitle}>
+                    {t('{{amount}} with projection', {
+                      amount: `${momProjDelta > 0 ? '+' : ''}${money(withProj - prior, { precision: 0 })}`,
+                    })}
+                  </p>
+                  <DeltaBadge value={momProjDelta} />
+                </>
+              )}
+            </div>
           </>
         )}
       </div>
@@ -146,10 +171,22 @@ export default function HeadlineStrip({ selectedMonth }: Props) {
           <p className="mt-2 text-lg text-gray-400 dark:text-gray-500">{t('No prior data')}</p>
         ) : (
           <>
-            <p className="mt-2 text-xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100 tabular-nums">
-              {yoyDelta > 0 ? '+' : ''}{money(current - priorYear, { precision: 0 })}
-            </p>
-            <DeltaBadge value={yoyDelta} label={t('YoY')} />
+            <div className="mt-2 grid grid-cols-1 sm:grid-cols-[max-content_max-content] items-baseline gap-x-3 gap-y-1">
+              <p className="text-xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100 tabular-nums">
+                {yoyDelta > 0 ? '+' : ''}{money(current - priorYear, { precision: 0 })}
+              </p>
+              <DeltaBadge value={yoyDelta} label={t('YoY')} />
+              {yoyProjDelta !== null && (
+                <>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 tabular-nums" title={projTitle}>
+                    {t('{{amount}} with projection', {
+                      amount: `${yoyProjDelta > 0 ? '+' : ''}${money(withProj - priorYear, { precision: 0 })}`,
+                    })}
+                  </p>
+                  <DeltaBadge value={yoyProjDelta} />
+                </>
+              )}
+            </div>
           </>
         )}
       </div>

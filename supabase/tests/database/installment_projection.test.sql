@@ -5,7 +5,7 @@
 -- (`is_due_this_month`), so the last assertions pin the two together on the same
 -- fixture — that is the guard against the two definitions drifting apart.
 BEGIN;
-SELECT plan(11);
+SELECT plan(15);
 
 INSERT INTO auth.users (id) VALUES ('00000000-0000-0000-0000-0000000000d1');
 SELECT set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000d1', true);
@@ -67,6 +67,24 @@ SELECT ok((SELECT COUNT(*) = 0 FROM proj WHERE payee = 'Landed Series'),
 -- because the real installment has landed and moved last_pay into the month.
 SELECT is((SELECT COUNT(*)::int FROM public.get_projected_installments('2026-09-01')), 0,
   'September is fully reported, so nothing is projected for it');
+
+-- get_dashboard_monthly_totals cuts the projection to the elapsed-days window:
+-- 'Open Series' last landed on 2026-09-02, so it is expected on the 2nd.
+SELECT is(
+  (public.get_dashboard_monthly_totals('2026-10-01', '2026-10-10')->>'projected_mtd')::numeric,
+  100.00,
+  'the projection enters the window once its usual day of the month has passed');
+SELECT is(
+  (public.get_dashboard_monthly_totals('2026-10-01', '2026-10-01')->>'projected_mtd')::numeric,
+  0.00,
+  'a series expected later in the month is not in the window yet');
+SELECT is(
+  (public.get_dashboard_monthly_totals('2026-10-01', '2026-10-01')->>'projected_installments')::numeric,
+  100.00,
+  'the whole-month projection is unaffected by the window');
+SELECT ok(
+  (public.get_dashboard_monthly_totals('2026-09-01', '2026-10-10')->>'projected_mtd') IS NULL,
+  'a closed month has no elapsed-days window to cut');
 
 -- get_dashboard_installments must agree with the standalone function.
 SELECT is(
