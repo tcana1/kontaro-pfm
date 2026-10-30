@@ -12,6 +12,10 @@ export interface MoneyFormat {
   hideCents?: boolean;
   // Wins over hideCents, for places that always show whole units (charts, summaries).
   precision?: number;
+  // Thousands as "6,5k", for cards too narrow on a phone to hold the full figure.
+  // Wins over precision. Intl's own compact notation is not used because it
+  // spells the unit out in most locales ("6,5 mil"), which is wider, not shorter.
+  compact?: boolean;
 }
 
 interface CurrencyConfig {
@@ -64,6 +68,16 @@ export const formatMoney = (amount: number, fmt: MoneyFormat): string => {
   const options: Intl.NumberFormatOptions = display === 'none'
     ? { style: 'decimal' }
     : { style: 'currency', currency: fmt.currency, currencyDisplay: display };
+
+  // Below a thousand the short form is both longer and vaguer ("R$ 0,5k"), so
+  // only amounts that actually need the room get it.
+  if (fmt.compact && Math.abs(amount) >= 1000) {
+    return `${new Intl.NumberFormat(fmt.locale, {
+      ...options,
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1,
+    }).format(amount / 1000)}k`;
+  }
 
   return new Intl.NumberFormat(fmt.locale, {
     ...options,

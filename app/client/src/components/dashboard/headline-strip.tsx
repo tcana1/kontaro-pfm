@@ -98,6 +98,11 @@ export default function HeadlineStrip({ selectedMonth }: Props) {
 
   const projTitle = t('With the projected installments added to the current window');
 
+  const projectedLabel = (delta: number, base: number, compact: boolean) =>
+    t('{{amount}} projected', {
+      amount: `${delta > 0 ? '+' : ''}${money(withProj - base, { precision: 0, compact })}`,
+    });
+
   const comparisonTitle = (previousMonth: Date) =>
     proRataDays
       ? t('Comparing {{current}} with {{previous}}', {
@@ -150,9 +155,8 @@ export default function HeadlineStrip({ selectedMonth }: Props) {
               {momProjDelta !== null && (
                 <>
                   <p className="text-sm text-gray-500 dark:text-gray-400 tabular-nums" title={projTitle}>
-                    {t('{{amount}} projected', {
-                      amount: `${momProjDelta > 0 ? '+' : ''}${money(withProj - prior, { precision: 0 })}`,
-                    })}
+                    <span className="sm:hidden">{projectedLabel(momProjDelta, prior, true)}</span>
+                    <span className="hidden sm:inline">{projectedLabel(momProjDelta, prior, false)}</span>
                   </p>
                   <DeltaBadge value={momProjDelta} />
                 </>
@@ -179,9 +183,8 @@ export default function HeadlineStrip({ selectedMonth }: Props) {
               {yoyProjDelta !== null && (
                 <>
                   <p className="text-sm text-gray-500 dark:text-gray-400 tabular-nums" title={projTitle}>
-                    {t('{{amount}} projected', {
-                      amount: `${yoyProjDelta > 0 ? '+' : ''}${money(withProj - priorYear, { precision: 0 })}`,
-                    })}
+                    <span className="sm:hidden">{projectedLabel(yoyProjDelta, priorYear, true)}</span>
+                    <span className="hidden sm:inline">{projectedLabel(yoyProjDelta, priorYear, false)}</span>
                   </p>
                   <DeltaBadge value={yoyProjDelta} />
                 </>

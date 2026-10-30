@@ -61,6 +61,20 @@ describe('currency-formatter', () => {
       expect(norm(formatMoney(1234.56, { currency: 'BRL', locale: 'pt-BR', hideCents: true, precision: 2 })))
         .toBe('R$ 1.234,56');
     });
+
+    it('should shorten thousands and punctuate them by locale', () => {
+      expect(norm(formatMoney(6452, { currency: 'BRL', locale: 'pt-BR', compact: true })))
+        .toBe('R$ 6,5k');
+      expect(formatMoney(6452, { currency: 'USD', locale: 'en-US', compact: true }))
+        .toBe('$6.5k');
+      expect(norm(formatMoney(-17492, { currency: 'BRL', locale: 'pt-BR', compact: true })))
+        .toBe('-R$ 17,5k');
+    });
+
+    it('should leave amounts under a thousand alone when compact', () => {
+      expect(norm(formatMoney(452, { currency: 'BRL', locale: 'pt-BR', compact: true, precision: 0 })))
+        .toBe('R$ 452');
+    });
   });
 
   describe('formatNumber', () => {
