@@ -3,20 +3,7 @@ import { useDoubleTap } from "@/hooks/use-double-tap";
 import { useTranslation } from 'react-i18next';
 import { format } from 'date-fns';
 import { useServiceQuery } from '@/hooks/useServiceQuery';
-import { useFinance } from '@/contexts/finance-context';
-
-
-const CURRENCY_SYMBOLS: Record<string, string> = {
-  USD: '$', EUR: '€', GBP: '£', JPY: '¥', BRL: 'R$',
-  MXN: '$', CAD: '$', AUD: '$', INR: '₹', CNY: '¥',
-};
-
-function compactAmount(value: number, currency: string): string {
-  const sign = value < 0 ? '-' : '';
-  const sym = CURRENCY_SYMBOLS[currency] ?? currency;
-  const k = Math.abs(value) / 1000;
-  return `${sign}${sym} ${k.toFixed(1)}k`;
-}
+import { useMoney } from '@/hooks/useMoney';
 import { openTransactionDrilldown } from '@/utils/drilldown-utils';
 
 interface Props {
@@ -45,7 +32,7 @@ function sortOptionB(items: SurpriseItem[]): SurpriseItem[] {
 export default function SurprisesCard({ selectedMonth }: Props) {
   const { t } = useTranslation();
   const bindDoubleTap = useDoubleTap();
-  const { currency } = useFinance();
+  const money = useMoney();
   const monthKey = format(selectedMonth, 'yyyy-MM');
 
   const { data = [], isLoading } = useServiceQuery<SurpriseItem[]>(
@@ -106,12 +93,12 @@ export default function SurprisesCard({ selectedMonth }: Props) {
 
                 {/* Current net */}
                 <span className="text-sm tabular-nums text-gray-600 dark:text-gray-400 flex-shrink-0 text-right w-16">
-                  {compactAmount(item.current_net, currency)}
+                  {money(item.current_net, { precision: 0, compact: true })}
                 </span>
 
                 {/* Delta */}
                 <span className={`text-sm tabular-nums font-medium flex-shrink-0 text-right w-16 ${colorCls}`}>
-                  {isUp ? '+' : ''}{compactAmount(delta, currency)}
+                  {isUp ? '+' : ''}{money(delta, { precision: 0, compact: true })}
                 </span>
 
                 {/* Arrow + % */}
