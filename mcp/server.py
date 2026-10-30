@@ -434,9 +434,17 @@ async def get_month_close(month: str) -> Any:
 async def get_installments(month: str) -> Any:
     """
     Installment series for a month (YYYY-MM-DD, first day): active, stalled, ending this
-    month, starting this month, and `due_this_month` — series owed an installment this
-    month that has not been reported yet (inferred, not stored). Use it for the
-    installment tracker and the outlook.
+    month, ending next month, starting this month, and `due_this_month` — series owed an
+    installment this month that has not been reported yet (inferred, not stored). Use it
+    for the installment tracker and the outlook.
+
+    While a card bill is open, a series' `paid`/`remaining` are one month behind: the
+    installment it still owes is this month's. So `ending_this_month` also lists series
+    whose last installment is on the open bill, flagged `projected: true` (inferred, quote
+    them separately from the ones already stored), and `ending_next_month` counts a due
+    series with remaining = 2 and a series that already landed with remaining = 1. Each
+    `active` item carries `is_due_this_month`: for those, the first remaining installment
+    falls in this month, not the next.
     """
     return await _rpc("get_dashboard_installments", {"p_month": month})
 

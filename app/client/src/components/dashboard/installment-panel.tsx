@@ -9,6 +9,7 @@ import {
 } from 'recharts';
 import { useServiceQuery } from '@/hooks/useServiceQuery';
 import { useMoney } from '@/hooks/useMoney';
+import { useFinance } from '@/contexts/finance-context';
 import { ChartTooltip } from '@/components/ui/chart-tooltip';
 
 interface Props {
@@ -22,6 +23,9 @@ interface InstallmentSeries {
   paid: number;
   remaining: number;
   monthly_amount: number;
+  // This month's installment is on the still-open card bill and not reported yet,
+  // so paid/remaining are one month behind.
+  is_due_this_month?: boolean;
 }
 
 interface MonthEvent {
@@ -29,6 +33,8 @@ interface MonthEvent {
   purchase_date: string;
   installment_total: number;
   monthly_amount: number;
+  // Inferred: the last installment is on the open bill, not stored yet.
+  projected?: boolean;
 }
 
 interface InstallmentData {
@@ -48,11 +54,13 @@ function shortK(val: number): string {
   return `${(val / 1000).toFixed(val >= 10000 ? 0 : 1)}k`;
 }
 
-function buildTimeline(active: InstallmentSeries[], fromMonth: Date, dateLocale: Locale): TimelineEntry[] {
+export function buildTimeline(active: InstallmentSeries[], fromMonth: Date, dateLocale: Locale): TimelineEntry[] {
   const buckets: Record<string, number> = {};
   for (const series of active) {
-    for (let i = 1; i <= series.remaining; i++) {
-      const key = format(addMonths(fromMonth, i), 'yyyy-MM');
+    // A series still owing this month's installment starts here, not next month.
+    const first = series.is_due_this_month ? 0 : 1;
+    for (let i = 0; i < series.remaining; i++) {
+      const key = format(addMonths(fromMonth, first + i), 'yyyy-MM');
       buckets[key] = (buckets[key] ?? 0) + series.monthly_amount;
     }
   }
@@ -92,6 +100,7 @@ interface ExpandableSectionProps {
 }
 
 function ExpandableSection({ label, items, total, totalSuffix, showInstallmentCount, showProgress }: ExpandableSectionProps) {
+  const { t } = useTranslation();
   const money = useMoney();
   const [open, setOpen] = useState(false);
   if (items.length === 0) return null;
@@ -120,7 +129,17 @@ function ExpandableSection({ label, items, total, totalSuffix, showInstallmentCo
         <div className="mt-1.5 ml-5 space-y-1">
           {items.map((item, i) => (
             <div key={i} className="flex items-center justify-between gap-2">
-              <span className="text-xs text-gray-500 dark:text-gray-400 truncate">{item.payee}</span>
+              <span className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                {item.payee}
+                {item.projected && (
+                  <span
+                    className="ml-1.5 text-[10px] uppercase tracking-wide text-gray-400 dark:text-gray-500"
+                    title={t('Last installment is on the open card bill, not reported by the bank yet')}
+                  >
+                    {t('Projected')}
+                  </span>
+                )}
+              </span>
               <span className="text-xs tabular-nums text-gray-500 dark:text-gray-400 flex-shrink-0">
                 {showProgress && item.paid != null && item.installment_total > 0
                   ? <><span className="text-gray-400 dark:text-gray-500 mr-1.5">{item.paid}/{item.installment_total}</span>{money(displayAmounts[i], { precision: 0 })}</>
@@ -141,6 +160,7 @@ export default function InstallmentPanel({ selectedMonth }: Props) {
   const { t } = useTranslation();
   const dateLocale = useDateFnsLocale();
   const money = useMoney();
+  const { showInstallmentProjection } = useFinance();
   const monthKey = format(selectedMonth, 'yyyy-MM');
 
   const { data, isLoading } = useServiceQuery<InstallmentData>(
@@ -152,13 +172,16 @@ export default function InstallmentPanel({ selectedMonth }: Props) {
   );
 
   const active   = data?.active           ?? [];
-  const ending   = data?.ending_this_month   ?? [];
+  // Presentation only: with the projection off, only endings the bank reported show.
+  const ending   = (data?.ending_this_month ?? []).filter(e => showInstallmentProjection || !e.projected);
   const starting = data?.starting_this_month ?? [];
 
   const totalActive    = active.reduce((s, a) => s + a.monthly_amount, 0);
   const totalFreed     = ending.reduce((s, e) => s + e.monthly_amount, 0);
   const totalNewBurden = starting.reduce((s, e) => s + e.monthly_amount, 0);
-  const netBurdenChange = totalNewBurden - totalFreed;
+  // What leaves next month is exactly what ends this month. What starts next month
+  // does not exist yet, and what started this month is already in this month's base.
+  const netBurdenChange = -totalFreed;
 
 
   const timeline = buildTimeline(active, selectedMonth, dateLocale);
@@ -198,8 +221,11 @@ export default function InstallmentPanel({ selectedMonth }: Props) {
             <ExpandableSection label={t('Ending this month')} items={[...ending].sort((a, b) => b.monthly_amount - a.monthly_amount)} total={totalFreed} showInstallmentCount />
             <ExpandableSection label={t('Starting this month')} items={[...starting].sort((a, b) => b.monthly_amount - a.monthly_amount)} total={totalNewBurden} showInstallmentCount />
 
-            {(ending.length > 0 || starting.length > 0) && (
-              <div className="flex justify-between items-center border-t border-gray-100 dark:border-gray-700 pt-2">
+            {ending.length > 0 && (
+              <div
+                className="flex justify-between items-center border-t border-gray-100 dark:border-gray-700 pt-2"
+                title={t('Does not include installments that will start next month')}
+              >
                 <span className="text-xs font-medium text-gray-500 dark:text-gray-400">{t('Net change next month')}</span>
                 <span className={`text-sm font-medium tabular-nums ${netBurdenChange < 0 ? 'text-emerald-600 dark:text-emerald-400' : netBurdenChange > 0 ? 'text-amber-500' : 'text-gray-500'}`}>
                   {netBurdenChange > 0 ? '+' : ''}{money(netBurdenChange, { precision: 0 })}{t('/mo')}
