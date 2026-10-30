@@ -112,7 +112,7 @@ export default function HeadlineStrip({ selectedMonth }: Props) {
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
       {/* Net Spend */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm">
+      <div className="col-span-2 sm:col-span-1 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm">
         <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">{t('Net Spend')}</p>
         {isLoading ? (
           <div className="mt-2 h-9 w-36 bg-gray-100 dark:bg-gray-700 rounded animate-pulse" />
@@ -134,15 +134,15 @@ export default function HeadlineStrip({ selectedMonth }: Props) {
       </div>
 
       {/* Month over Month */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm" title={momTitle}>
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm text-center sm:text-left" title={momTitle}>
         <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">{t('vs Prior Month')}</p>
         {isLoading ? (
-          <div className="mt-2 h-9 w-28 bg-gray-100 dark:bg-gray-700 rounded animate-pulse" />
+          <div className="mt-2 h-9 w-28 mx-auto sm:mx-0 bg-gray-100 dark:bg-gray-700 rounded animate-pulse" />
         ) : momDelta === null ? (
           <p className="mt-2 text-lg text-gray-400 dark:text-gray-500">{t('No prior data')}</p>
         ) : (
           <>
-            <div className="mt-2 grid grid-cols-1 sm:grid-cols-[max-content_max-content] items-baseline gap-x-3 gap-y-1">
+            <div className="mt-2 grid grid-cols-1 sm:grid-cols-[max-content_max-content] justify-items-center sm:justify-items-start items-baseline gap-x-3 gap-y-1">
               <p className="text-xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100 tabular-nums">
                 {momDelta > 0 ? '+' : ''}{money(current - prior, { precision: 0 })}
               </p>
@@ -150,7 +150,7 @@ export default function HeadlineStrip({ selectedMonth }: Props) {
               {momProjDelta !== null && (
                 <>
                   <p className="text-sm text-gray-500 dark:text-gray-400 tabular-nums" title={projTitle}>
-                    {t('{{amount}} with projection', {
+                    {t('{{amount}} projected', {
                       amount: `${momProjDelta > 0 ? '+' : ''}${money(withProj - prior, { precision: 0 })}`,
                     })}
                   </p>
@@ -163,15 +163,15 @@ export default function HeadlineStrip({ selectedMonth }: Props) {
       </div>
 
       {/* Year over Year */}
-      <div className="col-span-2 sm:col-span-1 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm" title={yoyTitle}>
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm text-center sm:text-left" title={yoyTitle}>
         <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">{t('vs Prior Year')}</p>
         {isLoading ? (
-          <div className="mt-2 h-9 w-28 bg-gray-100 dark:bg-gray-700 rounded animate-pulse" />
+          <div className="mt-2 h-9 w-28 mx-auto sm:mx-0 bg-gray-100 dark:bg-gray-700 rounded animate-pulse" />
         ) : yoyDelta === null ? (
           <p className="mt-2 text-lg text-gray-400 dark:text-gray-500">{t('No prior data')}</p>
         ) : (
           <>
-            <div className="mt-2 grid grid-cols-1 sm:grid-cols-[max-content_max-content] items-baseline gap-x-3 gap-y-1">
+            <div className="mt-2 grid grid-cols-1 sm:grid-cols-[max-content_max-content] justify-items-center sm:justify-items-start items-baseline gap-x-3 gap-y-1">
               <p className="text-xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100 tabular-nums">
                 {yoyDelta > 0 ? '+' : ''}{money(current - priorYear, { precision: 0 })}
               </p>
@@ -179,7 +179,7 @@ export default function HeadlineStrip({ selectedMonth }: Props) {
               {yoyProjDelta !== null && (
                 <>
                   <p className="text-sm text-gray-500 dark:text-gray-400 tabular-nums" title={projTitle}>
-                    {t('{{amount}} with projection', {
+                    {t('{{amount}} projected', {
                       amount: `${yoyProjDelta > 0 ? '+' : ''}${money(withProj - priorYear, { precision: 0 })}`,
                     })}
                   </p>
