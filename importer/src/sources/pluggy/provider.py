@@ -322,6 +322,11 @@ class PluggyProvider(BaseProvider):
                 continue
             if account_type == "bank" and tx.get("categoryId") == AUTO_INVESTMENT_CATEGORY:
                 continue
+            # On checking, PENDING rows are scheduled boletos/Pix dated on their due
+            # date; the executed payment can arrive as a new POSTED row with another
+            # id, so importing both would duplicate it.
+            if account_type == "bank" and tx.get("status") != "POSTED":
+                continue
             try:
                 if account_type == "bank":
                     pfm_tx = to_pfm_transaction_bank(tx, tz=self._tz)

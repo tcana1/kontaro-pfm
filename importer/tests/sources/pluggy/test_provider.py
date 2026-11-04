@@ -560,3 +560,28 @@ class TestAutoInvestmentFilter:
 
     def test_sweep_skipped_for_bank_account(self):
         assert [t.statement_identifier for t in self._fetch("bank")] == ["pluggy:yield"]
+
+
+class TestBankPendingFilter:
+    def _txs(self):
+        return [
+            {"id": "scheduled", "date": "2026-11-03T12:00:00.000Z",
+             "description": "Pagamento de boleto A C SERV DE EDUCACAO S C LTDA",
+             "amount": 1700.0, "type": "DEBIT", "status": "PENDING"},
+            {"id": "paid", "date": "2026-11-03T12:00:00.000Z",
+             "description": "Pagamento de boleto A C SERV DE EDUCACAO S C LTDA",
+             "amount": 1700.0, "type": "DEBIT", "status": "POSTED"},
+        ]
+
+    def _fetch(self, account_type):
+        with patch("src.sources.pluggy.provider._get_api_key", return_value="key"), \
+             patch("src.sources.pluggy.provider._pluggy_get",
+                   return_value={"results": self._txs(), "next": None}):
+            provider = PluggyProvider("cid", "csec", tz="UTC")
+            return provider.fetch_transactions("acct", date(2026, 11, 1), account_type=account_type)
+
+    def test_pending_skipped_for_bank_account(self):
+        assert [t.statement_identifier for t in self._fetch("bank")] == ["pluggy:paid"]
+
+    def test_pending_kept_for_credit_card_account(self):
+        assert [t.statement_identifier for t in self._fetch("credit_card")] == ["pluggy:scheduled", "pluggy:paid"]
