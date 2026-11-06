@@ -224,16 +224,18 @@ const SingleEditDialog: React.FC<Props> = ({ transaction, isOpen, isAdding, onSa
                     onFieldLock={handleFieldLock}
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label>{t('Amount')}</Label>
-                  <AmountInput
-                    size="default"
-                    value={watch('amount')}
-                    onChange={(v) => setValue('amount', v, { shouldDirty: true })}
-                    error={te(errors.amount?.message)}
-                  />
-                </div>
               </>
+            }
+            amountField={
+              <div className="space-y-2">
+                <Label>{t('Amount')}</Label>
+                <AmountInput
+                  size="default"
+                  value={watch('amount')}
+                  onChange={(v) => setValue('amount', v, { shouldDirty: true })}
+                  error={te(errors.amount?.message)}
+                />
+              </div>
             }
             afterNotes={
                 !isAdding && transaction && (
@@ -356,6 +358,8 @@ const SingleEditDialog: React.FC<Props> = ({ transaction, isOpen, isAdding, onSa
             cancelDisabled={isSaving}
             submitType="submit"
             submitDisabled={isSaving}
+            submitLabel={t('Save')}
+            submitting={isSaving}
             submitContent={isSaving ? <Spinner className="h-4 w-4" /> : t('Save')}
           />
         </form>

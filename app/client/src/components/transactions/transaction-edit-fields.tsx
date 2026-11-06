@@ -8,7 +8,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon } from 'lucide-react';
+import { CalendarIcon, Check, Loader2 } from 'lucide-react';
 import { useFinance } from '@/contexts/finance-context';
 import { formatDateForDisplay } from '@/lib/date-utils';
 import { cn } from '@/lib/utils';
@@ -43,8 +43,10 @@ interface TransactionEditFieldsProps {
   accountError?: string;
   notes: string;
   onNotesChange: (value: string) => void;
-  // Single-only fields (Payee, Amount) rendered right below Date/Status.
+  // Single-only field (Payee) rendered right below Date/Status.
   afterDateStatus?: React.ReactNode;
+  // Single-only Amount field; shares a row with the Ignore Flag on phones.
+  amountField?: React.ReactNode;
   // Single-only fields (Tag) rendered below Notes.
   afterNotes?: React.ReactNode;
 }
@@ -72,6 +74,7 @@ const TransactionEditFields: React.FC<TransactionEditFieldsProps> = ({
   notes,
   onNotesChange,
   afterDateStatus,
+  amountField,
   afterNotes,
 }) => {
   const { t } = useTranslation();
@@ -83,8 +86,8 @@ const TransactionEditFields: React.FC<TransactionEditFieldsProps> = ({
     .sort((a, b) => a.name.localeCompare(b.name));
 
   return (
-    <div className="space-y-4 py-4">
-      <div className={cn("grid grid-cols-1 gap-4", showStatusAndIgnore && "sm:grid-cols-2")}>
+    <div className="space-y-3 py-2 sm:space-y-4 sm:py-4">
+      <div className={cn("grid grid-cols-1 gap-4", showStatusAndIgnore && "grid-cols-2")}>
         <div className="space-y-2">
           <Label htmlFor="date">{t('Date')}</Label>
           <Popover>
@@ -137,13 +140,16 @@ const TransactionEditFields: React.FC<TransactionEditFieldsProps> = ({
 
       {afterDateStatus}
 
+      <div className={cn(amountField && showStatusAndIgnore && "grid grid-cols-2 items-start gap-4 sm:grid-cols-1")}>
+      {amountField}
+
       {showStatusAndIgnore && (
         <div className="space-y-2">
           <Label className="text-sm font-medium">{t('Ignore Flag')}</Label>
           <RadioGroup
             value={isIgnored}
             onValueChange={onIsIgnoredChange}
-            className="flex flex-wrap gap-x-6 gap-y-2"
+            className={cn("flex flex-wrap gap-x-6 gap-y-2", amountField && "max-sm:flex-col max-sm:gap-x-0")}
           >
             {isBatch && (
               <div className="flex items-center space-x-2">
@@ -162,6 +168,7 @@ const TransactionEditFields: React.FC<TransactionEditFieldsProps> = ({
           </RadioGroup>
         </div>
       )}
+      </div>
 
       <div className="space-y-2">
         <Label htmlFor="category">{t('Category')}</Label>
@@ -232,10 +239,10 @@ interface EditDialogShellProps {
 export const EditDialogShell: React.FC<EditDialogShellProps> = ({ open, onOpenChange, title, children }) => (
   <Dialog open={open} onOpenChange={onOpenChange}>
     <DialogContent
-      className="sm:max-w-md max-h-[90dvh] overflow-y-auto"
+      className="overflow-y-auto sm:max-h-[90dvh] sm:max-w-md max-sm:left-0 max-sm:top-0 max-sm:h-[100dvh] max-sm:w-full max-sm:max-w-none max-sm:!transform-none max-sm:content-start max-sm:gap-2 max-sm:rounded-none max-sm:border-0 max-sm:px-4 max-sm:pb-28 max-sm:pt-[max(1rem,env(safe-area-inset-top))]"
       onOpenAutoFocus={(e) => e.preventDefault()}
     >
-      <DialogHeader>
+      <DialogHeader className="max-sm:text-center">
         <DialogTitle>{title}</DialogTitle>
       </DialogHeader>
       {children}
@@ -247,6 +254,9 @@ interface EditDialogFooterProps {
   onCancel: () => void;
   cancelDisabled?: boolean;
   submitContent: React.ReactNode;
+  // Accessible name for the floating phone button, which shows only an icon.
+  submitLabel?: string;
+  submitting?: boolean;
   submitDisabled?: boolean;
   submitType?: 'button' | 'submit';
   onSubmit?: () => void;
@@ -257,6 +267,8 @@ export const EditDialogFooter: React.FC<EditDialogFooterProps> = ({
   onCancel,
   cancelDisabled,
   submitContent,
+  submitLabel,
+  submitting,
   submitDisabled,
   submitType = 'button',
   onSubmit,
@@ -265,11 +277,21 @@ export const EditDialogFooter: React.FC<EditDialogFooterProps> = ({
   const { t } = useTranslation();
   return (
     <DialogFooter className="flex gap-2 sm:gap-0 sm:justify-between justify-between items-stretch sm:items-center pt-4">
-      <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={onCancel} disabled={cancelDisabled}>
+      <Button type="button" variant="outline" className="w-full sm:w-auto max-sm:mb-[env(safe-area-inset-bottom)]" onClick={onCancel} disabled={cancelDisabled}>
         {t('Cancel')}
       </Button>
-      <Button ref={submitRef} type={submitType} className="w-full sm:w-auto" onClick={onSubmit} disabled={submitDisabled}>
-        {submitContent}
+      <Button
+        ref={submitRef}
+        type={submitType}
+        className="w-full sm:w-auto max-sm:fixed max-sm:bottom-[max(1rem,env(safe-area-inset-bottom))] max-sm:right-4 max-sm:z-[60] max-sm:h-14 max-sm:w-14 max-sm:rounded-full max-sm:p-0 max-sm:shadow-lg"
+        onClick={onSubmit}
+        disabled={submitDisabled}
+        aria-label={submitLabel}
+      >
+        <span className="max-sm:hidden">{submitContent}</span>
+        <span className="sm:hidden">
+          {submitting ? <Loader2 className="h-6 w-6 animate-spin" /> : <Check className="h-6 w-6" />}
+        </span>
       </Button>
     </DialogFooter>
   );

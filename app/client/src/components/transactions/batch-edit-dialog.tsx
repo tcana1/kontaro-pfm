@@ -335,6 +335,8 @@ const BatchEditDialog: React.FC<BatchEditDialogProps> = ({
               submitRef={updateButtonRef}
               onSubmit={handleSubmit}
               submitDisabled={isLoading}
+              submitLabel={t('Update {{count}} Transactions', { count: selectedTransactions.length })}
+              submitting={isLoading}
               submitContent={isLoading ? t('Updating...') : t('Update {{count}} Transactions', { count: selectedTransactions.length })}
             />
           </>
